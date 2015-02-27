@@ -1,6 +1,6 @@
 import socket
 
-serv = "localhost"
+serv = "10.0.0.3"
 port = 50000
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((serv,port))
