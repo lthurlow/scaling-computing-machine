@@ -48,6 +48,32 @@ def get_route_table():
 			entries.append(table)
 	return entries
 
-
-get_arp_table()
-get_route_table()
+def get_dev_info():
+	dev_f = open("/proc/net/dev","r")
+	lcount = 0
+	headers = []
+	entries = []
+	for line in dev_f:
+		table = {}
+		if lcount != 0:
+			if lcount == 1:
+				row = re.findall(r'([a-zA-Z]+)',line)
+				count = 0
+				for x in row:
+					if count == 0:
+						headers.append('interface')
+					elif (count < (len(row)/2)):
+						headers.append('r_'+x.split()[0])
+					else:
+						headers.append('t_'+x.split()[0])
+					count += 1
+			else:
+				row = re.findall(r'([a-zA-Z0-9]+)',line)
+				count = 0
+				for x in row:
+					table[headers[count]] = x
+					count += 1
+				entries.append(table)
+		lcount += 1
+		
+	return entries

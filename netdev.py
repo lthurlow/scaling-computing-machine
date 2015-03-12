@@ -11,6 +11,8 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 import pcap, dpkt
 
+import anhost 
+
 def dummy_exec(code):
 	# create file-like string to capture output
 	codeOut = StringIO.StringIO()
