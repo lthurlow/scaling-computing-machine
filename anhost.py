@@ -1,5 +1,9 @@
 import re
 
+## assuming linux
+
+
+#get access to the arp table, return the contents
 def get_arp_table():
 	arp_f = open("/proc/net/arp","r")
 	header = False
@@ -23,6 +27,7 @@ def conv_hexip_to_dex(a):
 	return('.'.join(str(x) for x in [int(a[6:8],16),int(a[4:6],16),
 					int(a[2:4],16),int(a[0:2],16) ]))
 
+#get the ip routing table, return the contents
 def get_route_table():
 	route_f = open("/proc/net/route","r")
 	header = False
@@ -48,6 +53,7 @@ def get_route_table():
 			entries.append(table)
 	return entries
 
+#get the device information for all interfaces
 def get_dev_info():
 	dev_f = open("/proc/net/dev","r")
 	lcount = 0
