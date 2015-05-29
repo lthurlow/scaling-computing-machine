@@ -2,6 +2,15 @@ import re
 
 ## assuming linux
 
+def get_int_ip():
+  ip_f = open("/proc/net/tcp","r")
+  x = [l.strip() for l in ip_f]
+  ip_inv = x[-1].split(":")[1].strip()
+  ip = [int(((int(x)*10)+int(y))) for x,y in zip(ip_inv[0::2], ip_inv[1::2])]
+  ip_num = ip[::-1]
+  ip = [str(int(str(l),16)) for l in ip_num]
+  return '.'.join(ip)
+
 
 #get access to the arp table, return the contents
 def get_arp_table():
