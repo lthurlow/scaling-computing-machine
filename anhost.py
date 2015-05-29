@@ -1,6 +1,13 @@
 import re
+import socket
+import fcntl  # for get_ip_address
+import struct # for get_ip_address
 
 ## assuming linux
+
+def get_ip_address(ifname):
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  return socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', ifname[:15]))[20:24])
 
 class capsule:
   def __init__(self, src_ip, dst_ip, dst_port):
