@@ -5,6 +5,7 @@ import os                 # for deleting temp file
 import multiprocessing    # for server threading
 import socket             # for communication
 import logging            # for logging and debugging
+import time
 
 import anhost
 
@@ -30,12 +31,19 @@ def dummy_exec(code,addr):
   ## language detection and sandboxing here
   try:
     tpid = multiprocessing.current_process().name
-    print tpid
+    logger.debug("Thread Value: %s" % tpid)
     tf = open(str(tpid),'w')
     tf.write(code)
     tf.close()
     sp = subprocess.Popen(["python",str(tpid)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    var = (sp.stdout,sp.stderr)
+    time.sleep(5)
+    sp.terminate()
+    #var = sp.communicate()[1]
+    sp.wait()  # while p runs, the command's stdout and stderr should behave as usual
+    var = sp.stdout.read()  # unfortunately, this will return '' unless you use subprocess.PIPE
+    print var
+    var = sp.stderr.read()  # ditto
+    print var
     os.remove(str(tpid))
     return var
   except Exception, e:
