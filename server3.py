@@ -70,4 +70,4 @@ while True:
   print("msg:", msg)
   server_thread = threading.Thread(target=dummy_exec,args=(msg,))
   server_thread.start()
-  server_thread.join()
+  print(server_thread.join())
