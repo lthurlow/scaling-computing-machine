@@ -2,6 +2,28 @@ import re
 
 ## assuming linux
 
+class capsule:
+  def __init__(self, src_ip, dst_ip, dst_port):
+    self.src = src_ip
+    self.dst = dst_ip
+    ## again, until better prototype sans transport
+    self.sport = dst_port ## just to save some time
+    self.dport = dst_port 
+    self.code = None
+
+  def set_code(code):
+    self.code = code
+
+  def copy():
+    return self 
+
+  def invert():
+    tmp = self.src
+    self.src = self.dst
+    self.dst = tmp
+    ## no need to swap ports, cause this is ghetto
+
+## get interface ip for python3
 def get_int_ip():
   ip_f = open("/proc/net/tcp","r")
   x = [l.strip() for l in ip_f]
