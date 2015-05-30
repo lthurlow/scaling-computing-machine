@@ -9,7 +9,13 @@ def get_ip_address(ifname):
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   return socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', ifname[:15]))[20:24])
 
-class capsule:
+"""
+class Capsule:
+  self.src = None
+  self.dst = None
+  self.sport = None
+  self.dport = None
+  self.code = None
   def __init__(self, src_ip, dst_ip, dst_port):
     self.src = src_ip
     self.dst = dst_ip
@@ -29,6 +35,7 @@ class capsule:
     self.src = self.dst
     self.dst = tmp
     ## no need to swap ports, cause this is ghetto
+"""
 
 ## get interface ip for python3
 def get_int_ip():
