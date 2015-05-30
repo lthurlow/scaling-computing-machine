@@ -32,6 +32,7 @@ def dummy_exec(code,addr):
   try:
     tpid = multiprocessing.current_process().name
     logger.debug("Thread Value: %s" % tpid)
+    logger.debug(code)
     tf = open(str(tpid),'w')
     tf.write(code)
     tf.close()
