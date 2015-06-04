@@ -45,7 +45,8 @@ def dummy_exec(code,addr):
     print var
     var = sp.stderr.read()  # ditto
     print var
-    os.remove(str(tpid))
+    # comment out to verify change in file after
+    #os.remove(str(tpid))
     return var
   except Exception, e:
     logger.debug("Error caught, sending back to %s for %s", addr, e)

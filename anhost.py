@@ -182,11 +182,18 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     t_str = ""
     if write_type == "w":
       if type(var_type) == list:
+        print type(var_val)
         if type(var_val) == list:
           t_str = "%s = %s\n" % (var_name,var_val)
         elif type(var_val) == str:
           t_str = "%s = %s\n" % (var_name,"["+"\""+var_val+"\""+"]")
+        elif type(var_val) == float:
+          t_str = "%s = %s\n" % (var_name,"["+"\""+str(var_val)+"\""+"]")
         file_contents[index_value] = t_str
+      elif type(var_type) == float:
+        t_str = "%s = %s\n" % (var_name,str(var_val))
+        file_contents[index_value] = t_str
+
     elif write_type == "a":
       if type(var_type) == list:
         t_str = file_contents[index_value]
