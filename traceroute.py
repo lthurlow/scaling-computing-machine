@@ -71,7 +71,7 @@ else:
     iter = 0
     for hop in trace:
       print "%d\t%s" % (iter+=1,hop)
-sock.send(open(__file__).read(), (anhost.use_default_route(dst),50000))
+sock.send(open(__file__).read(), (anhost.use_default_route(),50000))
 """
 
 sock.sendto(AN_code, (dst,port))
