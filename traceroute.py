@@ -62,12 +62,16 @@ if not fin:
     anhost.chg_val(__file__,0.0,"tmr",dn,'w')
   if curr_host == dst:
     fin = 1
+    tmp = dst
+    anhost.chg_val(__file__,"","dst",src,'w')
+    anhost.chg_val(__file__,"","src",tmp,'w')
     
 else:
-  anhost.use_default_route()
   if curr_host == src:
-    print_trace()
-print "0"
+    iter = 0
+    for hop in trace:
+      print "%d\t%s" % (iter+=1,hop)
+sock.send(open(__file__).read(), (anhost.use_default_route(dst),50000))
 """
 
 sock.sendto(AN_code, (dst,port))

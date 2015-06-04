@@ -79,29 +79,32 @@ def conv_hexip_to_dex(a):
 
 #get the ip routing table, return the contents
 def get_route_table():
-	route_f = open("/proc/net/route","r")
-	header = False
-	headers = []
-	entries = []
-	for line in route_f:
-		table = {}
-		if not header:
-			header = True
-			[headers.append(x) for x in re.findall(r'([a-zA-Z]+)',line)]
-			for x in headers:
-				table[x] = []
-		else:
-			row = re.findall(r'([a-zA-Z0-9]+)',line)
-			count = 0
-			for x in row:
-				if (headers[count] == 'Mask' or headers[count] == 'Destination' or\
-				    headers[count] == 'Gateway'):
-					table[headers[count]] = conv_hexip_to_dex(x)
-				else:
-					table[headers[count]] = x
-				count += 1
-			entries.append(table)
-	return entries
+  try:
+    route_f = open("/proc/net/route","r")
+    header = False
+    headers = []
+    entries = []
+    for line in route_f:
+      table = {}
+      if not header:
+        header = True
+        [headers.append(x) for x in re.findall(r'([a-zA-Z]+)',line)]
+        for x in headers:
+          table[x] = []
+      else:
+        row = re.findall(r'([a-zA-Z0-9]+)',line)
+        count = 0
+        for x in row:
+          if (headers[count] == 'Mask' or headers[count] == 'Destination' or\
+              headers[count] == 'Gateway'):
+            table[headers[count]] = conv_hexip_to_dex(x)
+          else:
+            table[headers[count]] = x
+          count += 1
+        entries.append(table)
+    return entries
+  except Exception, e:
+    return str(e)
 
 #get the device information for all interfaces
 def get_dev_info():
@@ -210,5 +213,6 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     return str(e)
 
 
-#def use_default_route():
+def use_default_route(destination):
+  print get_route_table()
   
