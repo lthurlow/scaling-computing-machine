@@ -208,7 +208,7 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
           file_contents[index_value] = t_str
         elif type(var_val) == str:
           t_str = file_contents[index_value]
-          l_size = t_str.split(",")
+          l_size = t_str.split("\"")
           logging.info(l_size)
           t_str = t_str.strip().replace("]","")
           if len(l_size) > 1:
