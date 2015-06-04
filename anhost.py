@@ -219,6 +219,17 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
           else:
             t_str = t_str + "\""+ var_val +"\""+ "]\n"
           file_contents[index_value] = t_str
+        elif type(var_val) == float:
+          t_str = file_contents[index_value]
+          l_size = t_str.split(",")
+          logging.info(l_size)
+          t_str = t_str.strip().replace("]","")
+          if len(l_size) > 1:
+            t_str = t_str + str(var_val)+"," + "]\n"
+          else:
+            t_str = t_str + str(var_val)+","+ "]\n"
+          file_contents[index_value] = t_str
+
 
     logger.debug("post write: %s" % file_contents[index_value])
     f2 = open(disk_file,'w')
