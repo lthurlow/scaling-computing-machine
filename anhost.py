@@ -3,6 +3,7 @@ import socket
 import fcntl  # for get_ip_address
 import struct # for get_ip_address
 import logging
+import datetime
 import pprint
 
 logging.basicConfig(level=logging.DEBUG)
@@ -240,6 +241,12 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
   except Exception, e:
     return str(e)
 
+epoch = datetime.datetime.utcfromtimestamp(0)
+def get_time():
+  now = datetime.datetime.now()
+  now -= epoch
+  return float("%s.%s" % (now.seconds%60,now.microseconds/1000))
+  #return now.strftime("%s.%f")
 
 def use_default_route():
   rtable = get_route_table()

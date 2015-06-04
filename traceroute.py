@@ -17,41 +17,40 @@ trace = []
 import anhost as an
 import socket as sk
 import datetime as dt
-import time
-dn = time.mktime(dt.datetime.now().timetuple())
+dn = an.get_time()
 dst = "128.114.52.22"
 src = "128.114.52.25"
-sport = 50000
 fin = 0
 tmr = 0
 fi = __file__
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
 ch = an.get_ip_address("eth0")
-this_file = open(str(fi),'r')
-udp_data = this_file.read()
-this_file.close()
 if not fin:
   if ch == src:
     an.chg_val(fi,0.0,"tmr",dn,'w')
   else:
     an.chg_val(fi,[],"hop",ch,'a')
     if tmr:
+      print type(dn),type(tmr)
       an.chg_val(fi,[],"trace",dn-tmr,'a')
-      an.chg_val(fi,[],"tmr",dn,'w')
+      an.chg_val(fi,0.0,"tmr",dn,'w')
     else:
       an.chg_val(fi,0.0,"tmr",dn,'w')
     if ch == dst:
-      an.chg_val(fi,[],"fin",1,'w')
+      an.chg_val(fi,0,"fin",1,'w')
       tmp = dst
       an.chg_val(fi,"","dst",src,'w')
       an.chg_val(fi,"","src",tmp,'w')
+  sock.sendto(open(fi).read(), (dst,50000))
 else:
-  if ch == src:
+  if ch == dst:
     iter = 0
-    for hop in trace:
+    for h,tr in zip(hop,trace):
       iter +=1
-      print "%d\t%s" % (iter,hop)
-sock.sendto(open(fi).read(), (dst,50000))
+      print "%4s\t%20s\t%4s" % ("hop","host","delay")
+      print "%4d\t%20s\t%4s" % (iter,h,tr)
+  else:
+    sock.sendto(open(fi).read(), (dst,50000))
 """
 # we should run it locally first to populate, send to self first, then forward.
 local = anhost.get_ip_address("eth0")
