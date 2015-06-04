@@ -38,7 +38,8 @@ trace = []
 import anhost
 import socket
 import datetime
-dn = datetime.datetime.now()
+import time
+dn = time.mktime(datetime.datetime.now().timetuple())
 
 dst = "puertocayo.soe.ucsc.edu"
 src = "71.198.218.220"
@@ -56,9 +57,9 @@ this_file.close()
 
 if not fin:
   if tmr:
-    anhost.chg_val(__file__,[],trace,dn-tmr,a)
+    anhost.chg_val(__file__,[],"trace",dn-tmr,'a')
   else:
-    anhost.chg_val(__file__,[],tmr,dn,w)
+    anhost.chg_val(__file__,0.0,"tmr",dn,'w')
   if curr_host == dst:
     fin = 1
     
