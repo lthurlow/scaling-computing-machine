@@ -2,6 +2,11 @@ import re
 import socket
 import fcntl  # for get_ip_address
 import struct # for get_ip_address
+import logging
+import pprint
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 ## assuming linux
 
@@ -129,5 +134,74 @@ def get_dev_info():
 		
 	return entries
 
-def use_default_route():
+#http://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data
+def send_msg(sock, msg):
+  msg = struct.pack('>I', len(msg)) + msg
+  sock.sendall(msg)
+
+def recv_msg(sock):
+  raw_msglen = recvall(sock, 4)
+  if not raw_msglen:
+    return None
+  msglen = struct.unpack('>I', raw_msglen)[0]
+  # Read the message data
+  return recvall(sock, msglen)
+
+def recvall(sock, n):
+  data = ''
+  while len(data) < n:
+    packet = sock.recv(n - len(data))
+    if not packet:
+      return None
+    data += packet
+  return data
+
+
+## this code has so many assumptions, but for quick and dirty
+## modify the value in a file as if it was memory that could write
+## itself out
+def chg_val(disk_file, var_type, var_name, var_val, write_type):
+  logger.debug("file: %s, type: %s, name: %s, value: %s, write: %s" %\
+              (disk_file, var_type, var_name, var_val, write_type))
+  try:
+    f = open(disk_file,'r')
+    file_contents = []
+    for line in f:
+      file_contents.append(line)
+    f.close()
+    index_value = 0
+    for item in file_contents:
+      x = re.findall(r'.*%s.*=.*' % var_name ,item) #so many assumptions
+      if x:
+        logger.debug(x)
+        index_value = file_contents.index(item)
+        logger.debug(index_value)
+    ## not bothering to check values passed in, because that would be correct
+    logger.debug("line to re-write: %s" % file_contents[index_value].strip())
+    logger.debug("with %s" % var_val)
+    t_str = ""
+    if write_type == "w":
+      if type(var_type) == list:
+        if type(var_val) == list:
+          t_str = "%s = %s\n" % (var_name,var_val)
+        elif type(var_val) == str:
+          t_str = "%s = %s\n" % (var_name,"["+"\""+var_val+"\""+"]")
+        file_contents[index_value] = t_str
+    elif write_type == "a":
+      if type(var_type) == list:
+        t_str = file_contents[index_value]
+        t_str = t_str.strip().replace("]","")
+        t_str = t_str + ','+ ','.join([str(y) for y in var_val]) + "]\n"
+        file_contents[index_value] = t_str
+    logger.debug("post write: %s" % file_contents[index_value])
+    f2 = open(disk_file,'w')
+    for lne in file_contents:
+      f2.write(lne)
+    f2.close()
+        
+  except Exception, e:
+    return str(e)
+
+
+#def use_default_route():
   
