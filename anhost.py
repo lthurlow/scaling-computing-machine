@@ -128,3 +128,6 @@ def get_dev_info():
 		lcount += 1
 		
 	return entries
+
+def use_default_route():
+  
