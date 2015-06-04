@@ -195,6 +195,9 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
       elif type(var_type) == float:
         t_str = "%s = %s\n" % (var_name,str(var_val))
         file_contents[index_value] = t_str
+      elif type(var_type) == int:
+        t_str = "%s = %s\n" % (var_name,str(var_val))
+        file_contents[index_value] = t_str
       elif type(var_type) == str:
         t_str = "%s = \"%s\"\n" % (var_name,var_val)
         file_contents[index_value] = t_str
