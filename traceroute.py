@@ -31,9 +31,11 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #     do nothing
 #   get new current time, set variable and timer flag
 
+# For the final check of dst == curr_host, dst needs to be ip not str
 
 AN_code = \
 """
+hop = []
 trace = []
 import anhost
 import socket
@@ -41,7 +43,7 @@ import datetime
 import time
 dn = time.mktime(datetime.datetime.now().timetuple())
 
-dst = "puertocayo.soe.ucsc.edu"
+dst = "128.114.52.22"
 src = "71.198.218.220"
 sport = 50000
 fin = 0
@@ -49,29 +51,34 @@ tmr = 0
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 curr_host = anhost.get_ip_address("eth0")
-print "this_host: %s" % curr_host
 
 this_file = open(str(__file__),'r')
 udp_data = this_file.read()
 this_file.close()
 
 if not fin:
-  if tmr:
-    anhost.chg_val(__file__,[],"trace",dn-tmr,'a')
-  else:
+  if curr_host == src:
     anhost.chg_val(__file__,0.0,"tmr",dn,'w')
-  if curr_host == dst:
-    fin = 1
-    tmp = dst
-    anhost.chg_val(__file__,"","dst",src,'w')
-    anhost.chg_val(__file__,"","src",tmp,'w')
+  else:
+    anhost.chg_val(__file__,[],"hop",curr_host,'a')
+    if tmr:
+      anhost.chg_val(__file__,[],"trace",dn-tmr,'a')
+      anhost.chg_val(__file__,[],"tmr",dn,'w')
+    else:
+      anhost.chg_val(__file__,0.0,"tmr",dn,'w')
+    if curr_host == dst:
+      fin = 1
+      tmp = dst
+      anhost.chg_val(__file__,"","dst",src,'w')
+      anhost.chg_val(__file__,"","src",tmp,'w')
     
 else:
   if curr_host == src:
     iter = 0
     for hop in trace:
-      print "%d\t%s" % (iter+=1,hop)
-sock.send(open(__file__).read(), (anhost.use_default_route(),50000))
+      iter +=1
+      print "%d\t%s" % (iter,hop)
+sock.sendto(open(__file__).read(), (anhost.use_default_route(),50000))
 """
-
+# we should run it locally first to populate, send to self first, then forward.
 sock.sendto(AN_code, (dst,port))
