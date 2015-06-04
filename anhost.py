@@ -101,7 +101,7 @@ def get_route_table():
           else:
             table[headers[count]] = x
           count += 1
-        entries.append(table)
+        entries.append({table[headers[0]]:table})
     return entries
   except Exception, e:
     return str(e)
@@ -213,6 +213,12 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     return str(e)
 
 
-def use_default_route(destination):
-  print get_route_table()
+def use_default_route():
+  rtable = get_route_table()
+  for eth in rtable:
+    for eth_d in eth:
+      for val in eth[eth_d]:
+        if val == "Destination" and eth[eth_d][val] == "0.0.0.0":
+          return eth[eth_d]["Gateway"]
+  return -1
   

@@ -1,6 +1,7 @@
 import anhost
 import os
 import logging
+import pprint
 
 """
 x = anhost.chg_val("temp.py",[],"trace","x++","w")
@@ -23,4 +24,4 @@ print "\n"
 os.system("diff temp.py temp.txt")
 """
 
-anhost.use_default_route("127.0.0.1")
+x = anhost.use_default_route()
