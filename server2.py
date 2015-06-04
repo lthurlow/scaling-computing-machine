@@ -32,7 +32,8 @@ def dummy_exec(code,addr):
   try:
     tpid = multiprocessing.current_process().name
     logger.debug("Thread Value: %s" % tpid)
-    logger.debug(code)
+    for line in code.split('\n'):
+      logger.debug(line)
     tf = open(str(tpid),'w')
     tf.write(code)
     tf.close()
@@ -46,7 +47,7 @@ def dummy_exec(code,addr):
     var = sp.stderr.read()  # ditto
     print var
     # comment out to verify change in file after
-    #os.remove(str(tpid))
+    os.remove(str(tpid))
     return var
   except Exception, e:
     logger.debug("Error caught, sending back to %s for %s", addr, e)
