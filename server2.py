@@ -60,7 +60,7 @@ sock.bind((HOST,PORT))
 
 
 while True:
-  msg, addr = sock.recvfrom(1024)
+  msg, addr = sock.recvfrom(4096)
   #print "msg:", msg
   pool = multiprocessing.Pool(processes=1)
   async_result = pool.apply_async(dummy_exec, (msg,addr[0],))
