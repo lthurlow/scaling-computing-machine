@@ -1,16 +1,27 @@
 import socket # for creating a socket
-import fcntl  # for get_ip_address
-import struct # for get_ip_address
+#import fcntl  # for get_ip_address
+#import struct # for get_ip_address
+import re # for pattern matching ip address
 import anhost
 
-# should later use directory service, instead of hard code IP
-#dst = "172.31.13.99"
-dst = "puertocayo.soe.ucsc.edu"
-# AN port
-port = 50000
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def help_traceroute():
+  print("\ttraceroute -- print the route packets take to active network hosts")
+  print()
+  print("\tuse: traceroute host")
+  return
 
-AN_code = \
+def traceroute(args):
+  re_ip = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+  if not re_ip.match(str(args)):
+    help_traceroute()
+    return
+  # should later use directory service, instead of hard code IP
+  dst = str(args)
+  src = anhost.get_ip_address("eth0")
+  # AN port
+  port = 50000
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  AN_code = \
 """
 hop = []
 trace = []
@@ -18,8 +29,8 @@ import anhost as an
 import socket as sk
 import datetime as dt
 dn = an.get_time()
-dst = "128.114.52.22"
-src = "128.114.52.25"
+dst = ""
+src = ""
 fin = 0
 tmr = 0
 fi = __file__
@@ -32,9 +43,7 @@ if not fin:
     an.chg_val(fi,[],"hop",ch,'a')
     if tmr:
       print type(dn),type(tmr)
-      an.chg_val(fi,[],"trace",dn-tmr,'a')
-      an.chg_val(fi,0.0,"tmr",dn,'w')
-    else:
+      an.chg_val(fi,[],"trace",tmr-dn,'a')
       an.chg_val(fi,0.0,"tmr",dn,'w')
     if ch == dst:
       an.chg_val(fi,0,"fin",1,'w')
@@ -52,6 +61,9 @@ else:
   else:
     sock.sendto(open(fi).read(), (dst,50000))
 """
-# we should run it locally first to populate, send to self first, then forward.
-local = anhost.get_ip_address("eth0")
-sock.sendto(AN_code, (local,port))
+  # we should run it locally first to populate, send to self first, then forward.
+  local = anhost.get_ip_address("eth0")
+  local_code = anhost.set_src_dst(AN_code, src,dst)
+  print local_code
+  sock.sendto(local_code, (local,port))
+  #sock.sendto(AN_code, (local,port))

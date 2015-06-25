@@ -160,6 +160,16 @@ def recvall(sock, n):
     data += packet
   return data
 
+def set_src_dst(CODE,src,dst):
+  new_CODE = ""
+  for line in CODE.split('\n'):
+    if line == "src = \"\"":
+      new_CODE += "src = \"%s\"\n" % src
+    elif line == "dst = \"\"":
+      new_CODE += "dst = \"%s\"\n" % dst
+    else:
+      new_CODE = new_CODE + line + "\n"
+  return new_CODE
 
 ## this code has so many assumptions, but for quick and dirty
 ## modify the value in a file as if it was memory that could write
