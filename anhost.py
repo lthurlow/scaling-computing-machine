@@ -266,4 +266,12 @@ def use_default_route():
         if val == "Destination" and eth[eth_d][val] == "0.0.0.0":
           return eth[eth_d]["Gateway"]
   return -1
-  
+
+## short simple code to just broadcast unicast message
+def send_broadcast(ip,msg,port):
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  prefix = '.'.join(ip.split(".")[0:3])+'.'
+  for i in range(1,254):
+    print "sending to: %s" % prefix+str(i)
+    sock.sendto(msg, (prefix+str(i),port))
+

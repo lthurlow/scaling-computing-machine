@@ -1,6 +1,4 @@
 import socket # for creating a socket
-#import fcntl  # for get_ip_address
-#import struct # for get_ip_address
 import re # for pattern matching ip address
 import anhost
 
@@ -64,6 +62,4 @@ else:
   # we should run it locally first to populate, send to self first, then forward.
   local = anhost.get_ip_address("eth0")
   local_code = anhost.set_src_dst(AN_code, src,dst)
-  print local_code
   sock.sendto(local_code, (local,port))
-  #sock.sendto(AN_code, (local,port))
