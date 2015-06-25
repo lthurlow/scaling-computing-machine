@@ -271,7 +271,33 @@ def use_default_route():
 def send_broadcast(ip,msg,port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   prefix = '.'.join(ip.split(".")[0:3])+'.'
+  suff = ip.split(".")[-1]
   for i in range(1,254):
-    print "sending to: %s" % prefix+str(i)
-    sock.sendto(msg, (prefix+str(i),port))
+    if i != suff:
+      print "sending to: %s" % prefix+str(i)
+      sock.sendto(msg, (prefix+str(i),port))
 
+def send_update(n_dict,port):
+  print "sending %s" % n_dict
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  for ip in n_dict:
+    sock.sendto(n_dict, (ip,port))
+
+##will need to use IPC to communicate between main
+##thread and recieving thread, out of bound not
+##using ports 50000 or 50001
+def recv_update(n_dict,port,pid):
+  HOST = str(anhost.get_ip_address('eth0'))
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  sock.bind((HOST,port))
+  while True:
+    msg, addr = sock.recvfrom(4096)
+    print "recv'd from %s: %s" % (addr,msg)
+    ## then need to differentiate msg from n_dict
+    ## return an update n_dict.
+    ## dont need to worry about race cond. b/c just 1
+
+    ## when we return we will need to send it back
+    ## to net_dijkstra's pid through IPC
+
+  
