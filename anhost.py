@@ -269,10 +269,11 @@ def use_default_route():
   return -1
 
 ## short simple code to just broadcast unicast message
-def send_broadcast(ip,msg,port):
+def send_broadcast(msg,port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  prefix = '.'.join(ip.split(".")[0:3])+'.'
-  suff = ip.split(".")[-1]
+  local_ip = get_ip_address("eth0")
+  prefix = '.'.join(local_ip.split(".")[0:3])+'.'
+  suff = local_ip.split(".")[-1]
   logger.debug("not sending to: %s" % prefix+suff)
   for i in range(1,254):
     if i != suff:

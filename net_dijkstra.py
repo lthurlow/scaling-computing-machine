@@ -55,7 +55,7 @@ if not os.path.exists(route_fi):
   recv_thread.start()
 
   ##send message to neighbors
-  anhost.send_broadcast(dst,open(fi).read(),port)
+  anhost.send_broadcast(open(fi).read(),port)
 
   ## running, want to thread these off.
   logger.debug("start send")
