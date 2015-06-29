@@ -4,10 +4,11 @@ import fcntl  # for get_ip_address
 import struct # for get_ip_address
 import logging
 import datetime
-import pprint
+import time
+import pprint as pp
 
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 ## assuming linux
 
@@ -272,27 +273,33 @@ def send_broadcast(ip,msg,port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   prefix = '.'.join(ip.split(".")[0:3])+'.'
   suff = ip.split(".")[-1]
+  logger.debug("not sending to: %s" % prefix+suff)
   for i in range(1,254):
     if i != suff:
-      print "sending to: %s" % prefix+str(i)
       sock.sendto(msg, (prefix+str(i),port))
 
 def send_update(n_dict,port):
-  print "sending %s" % n_dict
+  time.sleep(20)
+  logger.debug("sending %s" % n_dict)
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  for ip in n_dict:
-    sock.sendto(n_dict, (ip,port))
+  neigh_list = [ip for ip in n_dict]
+  for ip in neigh_list:
+    sock.sendto(neigh_list, (ip,port))
 
 ##will need to use IPC to communicate between main
 ##thread and recieving thread, out of bound not
 ##using ports 50000 or 50001
-def recv_update(n_dict,port,pid):
-  HOST = str(anhost.get_ip_address('eth0'))
+def recv_update(n_dict,extern_port,local_port):
+  HOST = str(get_ip_address('eth0'))
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  sock.bind((HOST,port))
+  sock.bind((HOST,extern_port))
+  sock.setblocking(1) # non-blocking socket
   while True:
     msg, addr = sock.recvfrom(4096)
-    print "recv'd from %s: %s" % (addr,msg)
+    logger.debug("recv'd from %s: %s" % (addr,msg))
+
+    sock.sendto(msg,\
+        (get_ip_address('lo'),lcoal_port))
     ## then need to differentiate msg from n_dict
     ## return an update n_dict.
     ## dont need to worry about race cond. b/c just 1
