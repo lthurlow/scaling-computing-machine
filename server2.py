@@ -5,12 +5,20 @@ import os                 # for deleting temp file
 import multiprocessing    # for server threading
 import socket             # for communication
 import logging            # for logging and debugging
-import time
+import logging.handlers   # for twisted logging for multiple processes
+import time               # for sleeping
 
-import anhost
+import anhost             # for all my active networks stuff
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
+logging.basicConfig(format=FORMAT)
+logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
+logger.setLevel(logging.DEBUG)
+socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+logger.addHandler(socketHandler)
+
 
 INTERFACE = 'eth0'
 PORT = 50000
@@ -26,48 +34,66 @@ def return_code_error(error, addr):
   except Exception, e:
     logger.debug("message could not be sent: %s", e)
 
+def proc_exe(command):
+  process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+stderr=subprocess.STDOUT)
+
+  # Poll process for new output until finished
+  while True:
+    nextline = process.stdout.readline()
+    if nextline == '' and process.poll() != None:
+      break
+    sys.stdout.write(nextline)
+    sys.stdout.flush()
+
+  output = process.communicate()[0]
+  exitCode = process.returncode
+
+  if (exitCode == 0):
+    return output
+  else:
+    raise Exception(command, exitCode, output)
+
 ## For running the code (yes incrediably insecure)
 def dummy_exec(code,addr):
   ## language detection and sandboxing here
   try:
     tpid = multiprocessing.current_process().name
     logger.debug("Thread Value: %s" % tpid)
-    for line in code.split('\n'):
-      logger.debug(line)
+    ## create a file to contain the code to run
     tf = open(str(tpid),'w')
     tf.write(code)
     tf.close()
-    sp = subprocess.Popen(["python",str(tpid)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    time.sleep(5)
-    sp.terminate()
-    #var = sp.communicate()[1]
-    sp.wait()  # while p runs, the command's stdout and stderr should behave as usual
-    var = sp.stdout.read()  # unfortunately, this will return '' unless you use subprocess.PIPE
-    print var
-    var = sp.stderr.read()  # ditto
-    print var
-    # comment out to verify change in file after
+    logger.debug("File opened, running code")
+    ## function to run the code
+    var = proc_exe("python %s " % str(tpid))
+    ## kill file after
     os.remove(str(tpid))
     return var
   except Exception, e:
     logger.debug("Error caught, sending back to %s for %s", addr, e)
+    tpid = multiprocessing.current_process().name
+    os.remove(str(tpid))
     return ("Exception",e)
 
 
 HOST = str(anhost.get_ip_address(INTERFACE))
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((HOST,PORT))
+sock.setblocking(1) ## blocking socket
 
+try:
+  ## Server will always read
+  while True:
+    msg, addr = sock.recvfrom(4096)
+    pool = multiprocessing.Pool(processes=1)
+    print addr
+    ## what we are reading is code, so execute it
+    async_result = pool.apply_async(dummy_exec, (msg,addr[0],))
+    return_val = async_result.get()
+    print return_val
 
-while True:
-  msg, addr = sock.recvfrom(4096)
-  #print "msg:", msg
-  pool = multiprocessing.Pool(processes=1)
-  async_result = pool.apply_async(dummy_exec, (msg,addr[0],))
-  return_val = async_result.get()
-  #if type(return_val) == str:
-  #  print return_val
-  #elif type(return_val) == tuple:
-  print return_val
-  #if type(return_val) == tuple:
-  #  return_code_error(e,addr[0])
+except KeyboardInterrupt:
+  logging.info("Server killed by Ctrl-C")
+  print("\n")
+  exit(1)

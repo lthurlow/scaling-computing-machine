@@ -3,12 +3,21 @@ import socket
 import fcntl  # for get_ip_address
 import struct # for get_ip_address
 import logging
+import logging.handlers
 import datetime
 import time
+import os
 import pprint as pp
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__file__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
+logging.basicConfig(format=FORMAT)
+
+logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
+logger.setLevel(logging.DEBUG)
+socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+logger.addHandler(socketHandler)
+
 
 ## assuming linux
 
@@ -269,43 +278,93 @@ def use_default_route():
   return -1
 
 ## short simple code to just broadcast unicast message
-def send_broadcast(msg,port):
+def send_broadcast(local_ip,msg,port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  local_ip = get_ip_address("eth0")
   prefix = '.'.join(local_ip.split(".")[0:3])+'.'
   suff = local_ip.split(".")[-1]
+  logger.debug("broadcasting to: %s*" % prefix)
   logger.debug("not sending to: %s" % prefix+suff)
   for i in range(1,254):
     if i != suff:
       sock.sendto(msg, (prefix+str(i),port))
+    else:
+      logger.debug(i)
+  logger.debug("broadcast done.")
 
-def send_update(n_dict,port):
-  time.sleep(20)
-  logger.debug("sending %s" % n_dict)
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  neigh_list = [ip for ip in n_dict]
-  for ip in neigh_list:
-    sock.sendto(neigh_list, (ip,port))
+def send_update(sock,n_list):
+  logger.debug("sending update")
+  sock.sendto(n_list)
+  logger.debug("update sent")
 
-##will need to use IPC to communicate between main
-##thread and recieving thread, out of bound not
-##using ports 50000 or 50001
-def recv_update(n_dict,extern_port,local_port):
-  HOST = str(get_ip_address('eth0'))
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  sock.bind((HOST,extern_port))
-  sock.setblocking(1) # non-blocking socket
-  while True:
-    msg, addr = sock.recvfrom(4096)
-    logger.debug("recv'd from %s: %s" % (addr,msg))
+def recv_update(neighbors, addr, update):
+  add_list = []
+  up_list = []
+  dst_list = [x for x in up_list] # dst key list
 
-    sock.sendto(msg,\
-        (get_ip_address('lo'),lcoal_port))
-    ## then need to differentiate msg from n_dict
-    ## return an update n_dict.
-    ## dont need to worry about race cond. b/c just 1
+  logger.debug("update from: %s" % addr)
+  logger.debug("original list: %s" % neighbors)
+  logger.debug("neighbor's list: %s" % update)
 
-    ## when we return we will need to send it back
-    ## to net_dijkstra's pid through IPC
+  #add newly discovered nodes
+  for node in update:
+    cost = update[node][1] + 1 #add cost to us
+    if node not in dst_list:
+      add_list.append({node:[addr,cost]})
+  #update old cost updates
+    else:
+      ## cost strictly less than, otherwise no upd
+      if cost < neighbors[node][1]:
+        up_list.append({node:[addr,cost]})
 
+
+  logger.debug("added list: %s" % add_list)
+  logger.debug("updated list: %s" % up_list)
+
+  # need to update and return our modified dict
+  dst_list = []
+  if up_list:
+    dst_list = [i.keys()[0] for i in up_list]
+    #for i in up_list:
+    #  dst_list.append(i.keys()[0])
+  # new dict
+  update_neighbors = {}
+  # add new entries
+  for k in add_list:
+    update_nighbors.update(k)
+
+  # add original entries
+  for k in neighbors:
+    # add original entries
+    if k not in dst_list:
+      update_neighbors.update(neighbors[k])
+    # add updated entries
+    else:
+      for i in up_list:
+        if k == i.keys()[0]:
+           update_neighbors.update(up_list[i])
+
+  logger.debug(pprint.format(update_neighbors))
+  return update_neighbors
+
+def rip_server(code, serv_port, rip_port):
+  local_ip = get_ip_address("eth0")
+  # dst : via, cost
+  n_list = {local_ip:[local_ip,0]}
   
+  logger.debug("initial neighbor list: %s" % n_list)
+
+  #set up rip server socket
+  rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  rip_sock.bind((local_ip,rip_port))
+  rip_sock.setblocking(0) # blocking recv
+
+  ## start rip on neighbors
+  send_broadcast(local_ip, code,serv_port)
+  
+  while True:
+    msg, addr = rip_sock.recvfrom(4096)
+    logger.debug("message: %s" % msg)
+    logger.debug("sender's addr: %s" %addr)
+    #n_list = recv_update(n_list, addr, dict(msg))
+    #send_update(serv_sock, n_list)
+    time.sleep(10)
