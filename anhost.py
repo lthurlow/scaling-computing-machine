@@ -346,7 +346,7 @@ def recv_update(neighbors, addr, update):
   logger.debug(pprint.format(update_neighbors))
   return update_neighbors
 
-def rip_server(code, serv_port, rip_port):
+def rip_server(code, serv_port, rip_port,serv_fi):
   local_ip = get_ip_address("eth0")
   # dst : via, cost
   n_list = {local_ip:[local_ip,0]}
@@ -356,15 +356,23 @@ def rip_server(code, serv_port, rip_port):
   #set up rip server socket
   rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   rip_sock.bind((local_ip,rip_port))
-  rip_sock.setblocking(0) # blocking recv
+  rip_sock.setblocking(1) # blocking recv
 
   ## start rip on neighbors
   send_broadcast(local_ip, code,serv_port)
-  
-  while True:
-    msg, addr = rip_sock.recvfrom(4096)
-    logger.debug("message: %s" % msg)
-    logger.debug("sender's addr: %s" %addr)
-    #n_list = recv_update(n_list, addr, dict(msg))
-    #send_update(serv_sock, n_list)
-    time.sleep(10)
+  try:
+    while True:
+      msg, addr = rip_sock.recvfrom(4096)
+      logger.debug("message: %s" % msg)
+      logger.debug("sender's addr: %s" %addr)
+      #n_list = recv_update(n_list, addr, dict(msg))
+      #send_update(serv_sock, n_list)
+      time.sleep(10)
+  except KeyboardInterrupt:
+    logging.info("Server killed by Ctrl-C")
+    os.remove(serv_fi)
+  except Exception, e:
+    logging.error("RIP Server Crash: %s" % e)
+    os.remove(serv_fi)
+
+    

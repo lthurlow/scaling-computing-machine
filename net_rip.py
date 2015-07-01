@@ -37,17 +37,17 @@ logger.addHandler(socketHandler)
 serv_port = 50000 #active node server
 net_port = 50001 # rip port to use
 fi = __file__ # file name
-route_fi = ".route_rip" server file flag
+route_fi = ".route_rip" #server file flag
 
 logger.debug("Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
+  logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
   try:
-    logger.debug("writing file: %s" % route_fi)
     fi_o = open(route_fi,'w')
     fi_o.close()
     logging.debug("starting rip server thread")
-    rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,))
+    rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,route_fi,))
     rip_thread.start()
     rip_thread.join()
 
@@ -56,7 +56,7 @@ if not os.path.exists(route_fi):
     os.remove(route_fi)
     exit(1)
 else:
-  logging.info("route file found: server not executing")
+  logging.debug("FILES EXISTS DO NOTHING")
 """
 
 # we should run it locally first to populate, send to self first, then forward.

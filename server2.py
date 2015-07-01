@@ -4,16 +4,20 @@ import subprocess         # for running exec code
 import os                 # for deleting temp file
 import multiprocessing    # for server threading
 import socket             # for communication
+import signal             # for killing multiprocess
 import logging            # for logging and debugging
 import logging.handlers   # for twisted logging for multiple processes
 import time               # for sleeping
 
 import anhost             # for all my active networks stuff
 
+#def init_worker():
+#    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
+#logger = logging.getLogger(FORMAT)
 logger.setLevel(logging.DEBUG)
 socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
@@ -35,24 +39,35 @@ def return_code_error(error, addr):
     logger.debug("message could not be sent: %s", e)
 
 def proc_exe(command):
-  process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-stderr=subprocess.STDOUT)
+  #process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  try:
+    logger.debug("Proc_exe executing: %s" % command)
+    while True:
+      nextline = process.stdout.readline()
+      if nextline == '' and process.poll() != None:
+        exec_cont = -1
+      sys.stdout.write(nextline)
+      sys.stdout.flush()
+    logger.debug("command finished")
 
-  # Poll process for new output until finished
-  while True:
-    nextline = process.stdout.readline()
-    if nextline == '' and process.poll() != None:
-      break
-    sys.stdout.write(nextline)
-    sys.stdout.flush()
+    output = process.communicate()[0]
+    exitCode = process.returncode
+    logger.debug("process killed")
 
-  output = process.communicate()[0]
-  exitCode = process.returncode
-
-  if (exitCode == 0):
-    return output
-  else:
-    raise Exception(command, exitCode, output)
+    if (exitCode == 0):
+      return output
+    else:
+      logging.error("%s  %s  %s" % (command, exitCode, output))
+      raise Exception(command,exitCode,output)
+  except Exception, e:
+    logger.error("proc_exe: process killed: %s", e)
+    process.kill()
+    return -1
+  except KeyboardInterrupt:
+    logger.error("proc_exe: keyboard killed")
+    process.terminate()
+    return -1
 
 ## For running the code (yes incrediably insecure)
 def dummy_exec(code,addr):
@@ -65,35 +80,47 @@ def dummy_exec(code,addr):
     tf.write(code)
     tf.close()
     logger.debug("File opened, running code")
-    ## function to run the code
     var = proc_exe("python %s " % str(tpid))
-    ## kill file after
+    logger.debug("exit value of var=%s" % var)
     os.remove(str(tpid))
     return var
   except Exception, e:
-    logger.debug("Error caught, sending back to %s for %s", addr, e)
+    logger.error("Error caught:  %s", str(e))
     tpid = multiprocessing.current_process().name
     os.remove(str(tpid))
-    return ("Exception",e)
+    raise Exception(tpid,e.errno,e)
 
 
 HOST = str(anhost.get_ip_address(INTERFACE))
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((HOST,PORT))
 sock.setblocking(1) ## blocking socket
+logger.debug("server starting")
 
 try:
-  ## Server will always read
+  pool = multiprocessing.Pool(1)
   while True:
     msg, addr = sock.recvfrom(4096)
-    pool = multiprocessing.Pool(processes=1)
-    print addr
+    logger.debug("server recieve from: %s" %addr[0])
     ## what we are reading is code, so execute it
     async_result = pool.apply_async(dummy_exec, (msg,addr[0],))
-    return_val = async_result.get()
-    print return_val
-
+    try:
+      return_val = async_result.get()
+      logger.debug("server-mult returns: %s" % return_val)
+    except KeyboardInterrupt:
+      logger.error("Caught KeyboardInterrupt")
+      pool.terminate()
+      pool.join()
+      break
+    except Exception, e:
+      logger.error("Top level: %s" % str(e))
+      pool.close()
+      pool.join()
+      break
+except Exception,e:
+  logger.error("Error in server: %s" % e)
 except KeyboardInterrupt:
-  logging.info("Server killed by Ctrl-C")
-  print("\n")
-  exit(1)
+  logger.error("Keyboard Killed Server")
+  
+sock.close()
+exit(10)
