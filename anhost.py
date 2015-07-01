@@ -9,7 +9,7 @@ import time
 import os
 import pprint as pp
 
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
 logging.basicConfig(format=FORMAT)
 
 logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
@@ -24,34 +24,6 @@ logger.addHandler(socketHandler)
 def get_ip_address(ifname):
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   return socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', ifname[:15]))[20:24])
-
-"""
-class Capsule:
-  self.src = None
-  self.dst = None
-  self.sport = None
-  self.dport = None
-  self.code = None
-  def __init__(self, src_ip, dst_ip, dst_port):
-    self.src = src_ip
-    self.dst = dst_ip
-    ## again, until better prototype sans transport
-    self.sport = dst_port ## just to save some time
-    self.dport = dst_port 
-    self.code = None
-
-  def set_code(code):
-    self.code = code
-
-  def copy():
-    return self 
-
-  def invert():
-    tmp = self.src
-    self.src = self.dst
-    self.dst = tmp
-    ## no need to swap ports, cause this is ghetto
-"""
 
 ## get interface ip for python3
 def get_int_ip():
@@ -259,7 +231,8 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     f2.close()
         
   except Exception, e:
-    return str(e)
+    logger.error("Error in chg_val: %s" % str(e))
+    raise Exception(e)
 
 epoch = datetime.datetime.utcfromtimestamp(0)
 def get_time():
@@ -279,11 +252,12 @@ def use_default_route():
 
 ## short simple code to just broadcast unicast message
 def send_broadcast(local_ip,msg,port):
+  logger.debug("\tSEND_BROADCAST")
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   prefix = '.'.join(local_ip.split(".")[0:3])+'.'
   suff = local_ip.split(".")[-1]
-  logger.debug("broadcasting to: %s*" % prefix)
-  logger.debug("not sending to: %s" % prefix+suff)
+  logger.debug("\t\tbroadcasting to: %s*" % prefix)
+  logger.debug("\t\tnot sending to: %s" % prefix+suff)
   for i in range(1,254):
     if i != suff:
       sock.sendto(msg, (prefix+str(i),port))
@@ -300,10 +274,10 @@ def recv_update(neighbors, addr, update):
   add_list = []
   up_list = []
   dst_list = [x for x in up_list] # dst key list
-
-  logger.debug("update from: %s" % addr)
-  logger.debug("original list: %s" % neighbors)
-  logger.debug("neighbor's list: %s" % update)
+  logger.debug("\tRECV_UPDATE")
+  logger.debug("\t\tupdate from: %s" % addr)
+  logger.debug("\t\toriginal list: %s" % neighbors)
+  logger.debug("\t\tneighbor's list: %s" % update)
 
   #add newly discovered nodes
   for node in update:
@@ -347,11 +321,13 @@ def recv_update(neighbors, addr, update):
   return update_neighbors
 
 def rip_server(code, serv_port, rip_port,serv_fi):
+  logger.debug("RIP SERVER:")
+  logger.debug("PID: %s" % os.getpid())
   local_ip = get_ip_address("eth0")
   # dst : via, cost
   n_list = {local_ip:[local_ip,0]}
   
-  logger.debug("initial neighbor list: %s" % n_list)
+  logger.debug("\tinitial neighbor list: %s" % n_list)
 
   #set up rip server socket
   rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -359,20 +335,19 @@ def rip_server(code, serv_port, rip_port,serv_fi):
   rip_sock.setblocking(1) # blocking recv
 
   ## start rip on neighbors
-  send_broadcast(local_ip, code,serv_port)
+  #send_broadcast(local_ip, code,serv_port)
   try:
     while True:
+      logger.debug("\taceepting messages...")
       msg, addr = rip_sock.recvfrom(4096)
-      logger.debug("message: %s" % msg)
-      logger.debug("sender's addr: %s" %addr)
+      logger.debug("\tmessage: %s" % msg)
+      logger.debug("\tsender's addr: %s" %addr)
       #n_list = recv_update(n_list, addr, dict(msg))
       #send_update(serv_sock, n_list)
       time.sleep(10)
   except KeyboardInterrupt:
-    logging.info("Server killed by Ctrl-C")
+    logging.info("\tServer killed by Ctrl-C")
     os.remove(serv_fi)
   except Exception, e:
-    logging.error("RIP Server Crash: %s" % e)
+    logging.error("\tRIP Server Crash: %s" % e)
     os.remove(serv_fi)
-
-    

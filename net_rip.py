@@ -26,7 +26,7 @@ import logging
 import logging.handlers
 import datetime
 
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
 #logger = logging.getLogger(FORMAT)
@@ -40,29 +40,35 @@ net_port = 50001 # rip port to use
 fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
 
-logger.debug( "Checking for File")
+logger.debug("Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
-  logger.debug( "FILE DOES NOT EXIST: %s" % route_fi)
+  logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
+  rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,route_fi,))
   try:
     fi_o = open(route_fi,'w')
     fi_o.close()
-    logger.debug( "starting rip server thread")
-    rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,route_fi,))
+    logger.debug("%s Thread: RIP Server" % fi)
+    logger.debug("PID: %s" % os.getpid())
+    #rip_thread.daemon = True
     rip_thread.start()
     rip_thread.join()
-
-  except Exception,e:
-    logger.debug( "deleting route file: %s" % route_fi)
-    os.remove(route_fi)
-    exit(1)
+    logger.debug("RIP Server started")
   except KeyboardInterrupt:
-    logger.debug( "deleting route file: %s" % route_fi)
-    os.remove(route_fi)
-    exit(1)
+    logger.error("Key recieved! Killing threads")
+    rip_thread.kill()
+    exit(10)
+  except Exception,e:
+    logger.error("error in %s: %s" % (fi,str(e)))
+    logger.error("deleting server file: %s" % route_fi)
+    if os.path.exists(route_fi):
+      os.remove(route_fi)
+      raise Exception(e)
     
 else:
-  logger.debug( "FILES EXISTS DO NOTHING")
+  logger.debug("ROUTE FILE EXISTS- EXIT")
+
+exit(0)
 """
 
 # we should run it locally first to populate, send to self first, then forward.
