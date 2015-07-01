@@ -39,10 +39,11 @@ def return_code_error(error, addr):
     logger.debug("message could not be sent: %s", e)
 
 def proc_exe(command):
-  #process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  logger.debug("proc_exe")
+  logger.debug("Proc_exe executing: %s" % command)
+  #process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   try:
-    logger.debug("Proc_exe executing: %s" % command)
     while True:
       nextline = process.stdout.readline()
       if nextline == '' and process.poll() != None:
@@ -66,7 +67,7 @@ def proc_exe(command):
     return -1
   except KeyboardInterrupt:
     logger.error("proc_exe: keyboard killed")
-    process.terminate()
+    process.kill()
     return -1
 
 ## For running the code (yes incrediably insecure)
@@ -80,15 +81,18 @@ def dummy_exec(code,addr):
     tf.write(code)
     tf.close()
     logger.debug("File opened, running code")
-    var = proc_exe("python %s " % str(tpid))
+    #var = proc_exe("python %s " % str(tpid))
+    var = 0
     logger.debug("exit value of var=%s" % var)
-    os.remove(str(tpid))
+    if os.path.exists(tpid):
+      os.remove(str(tpid))
     return var
   except Exception, e:
     logger.error("Error caught:  %s", str(e))
     tpid = multiprocessing.current_process().name
-    os.remove(str(tpid))
-    raise Exception(tpid,e.errno,e)
+    if os.path.exists(tpid):
+      os.remove(str(tpid))
+    raise Exception(tpid,e)
 
 
 HOST = str(anhost.get_ip_address(INTERFACE))
@@ -111,6 +115,9 @@ try:
       logger.error("Caught KeyboardInterrupt")
       pool.terminate()
       pool.join()
+      ## definately need to fix this
+      ## FIXME
+      os.remove(".route_rip")
       break
     except Exception, e:
       logger.error("Top level: %s" % str(e))

@@ -28,35 +28,41 @@ import datetime
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
-logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
-logger.setLevel(logging.DEBUG) 
+logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
+#logger = logging.getLogger(FORMAT)
+logger.setLevel(logging.DEBUG)
 socketHandler = logging.handlers.SocketHandler('localhost',
-                    logging.handlers.DEFAULT_TCP_LOGGING_PORT) 
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
-                    
+
 serv_port = 50000 #active node server
 net_port = 50001 # rip port to use
 fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
 
-logger.debug("Checking for File")
+logger.debug( "Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
-  logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
+  logger.debug( "FILE DOES NOT EXIST: %s" % route_fi)
   try:
     fi_o = open(route_fi,'w')
     fi_o.close()
-    logging.debug("starting rip server thread")
+    logger.debug( "starting rip server thread")
     rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,route_fi,))
     rip_thread.start()
     rip_thread.join()
 
-  except:
-    logger.info("deleting route file: %s" % route_fi)
+  except Exception,e:
+    logger.debug( "deleting route file: %s" % route_fi)
     os.remove(route_fi)
     exit(1)
+  except KeyboardInterrupt:
+    logger.debug( "deleting route file: %s" % route_fi)
+    os.remove(route_fi)
+    exit(1)
+    
 else:
-  logging.debug("FILES EXISTS DO NOTHING")
+  logger.debug( "FILES EXISTS DO NOTHING")
 """
 
 # we should run it locally first to populate, send to self first, then forward.
