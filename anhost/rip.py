@@ -37,8 +37,8 @@ def send_broadcast(local_ip,msg,port):
 
 def write_n_fi(n_fi, n_dict):
   x = open(n_fi,'w')
-  for k,v in n_dict:
-    x.write(k+','+v[0]+','+v[1])
+  for k in n_dict:
+    x.write(k+','+n_dict[k][0]+','+n_dict[k][1])
   x.close()
 
 def read_n_fi(n_fi):
