@@ -123,9 +123,13 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
       if os.path.exists(thread_fi):
         logger.debug("\tThread: Safe Remove: %s" % thread_fi)
         os.remove(thread_fi)
-        logger.debug("\tRemoving PID %s from list" % pid)
-        PROCESS_TRACKER.remove(pid)
-        logger.debug("\tUpdated PID List: %s" % PROCESS_TRACKER)
+      logger.debug("\tRemoving PID %s from list" % pid)
+      PROCESS_TRACKER.remove(pid)
+      logger.debug("\tUpdated PID List: %s" % PROCESS_TRACKER)
+      if os.path.exists(".route_rip"):
+        os.remove(".route_rip")
+      if os.path.exists("50001.rip"):
+        os.remove("50001.rip")
     except Exception, error:
       logger.error("\tThread Excecution Error: %s" % error)
       return_code_error(error, addr)
