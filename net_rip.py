@@ -25,6 +25,7 @@ import threading
 import logging
 import logging.handlers
 import datetime
+import signal
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -39,6 +40,14 @@ serv_port = 50000 #active node server
 net_port = 50001 # rip port to use
 fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
+
+def signal_term_handler(signal, frame):
+  print "recvd ---- SIGHUP"
+  logger.error("deleting server file: %s" % route_fi)
+  if os.path.exists(route_fi):
+    os.remove(route_fi)
+
+signal.signal(signal.SIGHUP, signal_term_handler)
 
 logger.debug("Checking for File")
 ## if network server not running, start it

@@ -80,8 +80,16 @@ def kill_processes():
   logger.debug("KILL_PROCESSES")
   for proc in PROCESS_TRACKER:
     try:
+      #logger.info("Sending Hangup to %s" % proc)
+      #os.kill(proc,signal.SIGHUP)
+      #time.sleep(1)
+      ## sigkill is not allowed to be caught
       os.kill(proc,signal.SIGKILL)
       logger.info("Process %s killed" % proc)
+      ##FIXME
+      logger.info("Removing .route_rip")
+      if os.path.exists(".route_rip"):
+        os.remove(".route_rip")
     except Exception,e:
       logger.info("\tPrcoess %s unable to kill: %s" % (proc,str(e)))
 
@@ -100,6 +108,9 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
     thread_fi = "%s.%s.%s" % (addr,port,tname)
     ##writing data out to file for reading later
     tf = open(thread_fi,'w')
+    tf.write(data)
+    tf.close()
+    tf = open("debugger.txt",'w')
     tf.write(data)
     tf.close()
     try:

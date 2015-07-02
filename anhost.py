@@ -8,6 +8,7 @@ import datetime
 import time
 import os
 import pprint as pp
+import signal
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -17,7 +18,6 @@ logger.setLevel(logging.DEBUG)
 socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
-
 
 ## assuming linux
 
@@ -342,8 +342,8 @@ def rip_server(code, serv_port, rip_port,serv_fi):
       msg, addr = rip_sock.recvfrom(4096)
       logger.debug("\tmessage: %s" % msg)
       logger.debug("\tsender's addr: %s" %addr)
-      #n_list = recv_update(n_list, addr, dict(msg))
-      #send_update(serv_sock, n_list)
+      n_list = recv_update(n_list, addr, dict(msg))
+      send_update(serv_sock, n_list)
       time.sleep(10)
   except KeyboardInterrupt:
     logging.info("\tServer killed by Ctrl-C")
