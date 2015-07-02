@@ -259,7 +259,7 @@ def send_broadcast(local_ip,msg,port):
   logger.debug("\t\tbroadcasting to: %s*" % prefix)
   logger.debug("\t\tnot sending to: %s" % prefix+suff)
   for i in range(1,254):
-    if i != suff:
+    if i != int(suff):
       sock.sendto(msg, (prefix+str(i),port))
     else:
       logger.debug(i)
@@ -334,8 +334,9 @@ def rip_server(code, serv_port, rip_port,serv_fi):
   rip_sock.bind((local_ip,rip_port))
   rip_sock.setblocking(1) # blocking recv
 
+  logger.info("code to send: %s" % code)
   ## start rip on neighbors
-  #send_broadcast(local_ip, code,serv_port)
+  send_broadcast(local_ip, code,serv_port)
   try:
     while True:
       logger.debug("\taceepting messages...")

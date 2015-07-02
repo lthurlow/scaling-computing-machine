@@ -53,7 +53,7 @@ logger.debug("Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
   logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
-  rip_thread = threading.Thread(target=anhost.rip_server, args=(fi,serv_port,net_port,route_fi,))
+  rip_thread = threading.Thread(target=anhost.rip_server, args=(fi.read(),serv_port,net_port,route_fi,))
   try:
     fi_o = open(route_fi,'w')
     fi_o.close()
