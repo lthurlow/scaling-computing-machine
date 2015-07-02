@@ -38,7 +38,7 @@ def send_broadcast(local_ip,msg,port):
 def write_n_fi(n_fi, n_dict):
   x = open(n_fi,'w')
   for k in n_dict:
-    x.write(k+','+n_dict[k][0]+','+n_dict[k][1])
+    x.write(k+','+n_dict[k][0]+','+str(n_dict[k][1]))
   x.close()
 
 def read_n_fi(n_fi):
@@ -46,7 +46,7 @@ def read_n_fi(n_fi):
   neighbor = {}
   for l in x:
     k = l.split(',')
-    neighbor.update({k[0]:[k[1],k[2]]})
+    neighbor.update({k[0]:[k[1],int(k[2])]})
   x.close()
   return neighbor
 
