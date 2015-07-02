@@ -8,6 +8,7 @@ import logging.handlers
 import pprint
 import threading
 import anhost
+import json
 
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
@@ -49,20 +50,22 @@ def read_n_fi(n_fi):
   x.close()
   return neighbor
 
-def send_update(sock,n_fi):
+def send_update(sock,n_fi,rip_port):
   logger.debug("sending update")
   n_dict = read_n_fi(n_fi)
   ip_self = sock.getsockname()[0]
-  logging.debug("send_update: want IP %s " % ip_self )
-  for k in n_dict:
-    if k != ip_self:
-      sock.sendto(k,n_dict)
+  data_str = json.dumps(n_dict)
+  send_broadcast(ip_self,data_str,rip_port)
+  #FIXME, dont broadcast
+  #for k in n_dict:
+  #  if k != ip_self:
+  #    sock.sendto(k,n_dict)
   logger.debug("update sent")
 
-def send_handler(sock,n_fi):
+def send_handler(sock,n_fi,port):
   while True:
     logger.debug("Sending update")
-    send_update(sock, n_fi)
+    send_update(sock, n_fi,port)
     time.sleep(10)
 
 def recv_update(n_fi, addr, update):
@@ -119,8 +122,10 @@ def recv_handler(rip_sock,n_fi):
     logger.debug("\taceepting messages...")
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\tmessage: %s" % msg)
-    logger.debug("\tsender's addr: %s" %addr)
-    write_n_fi(n_fi,recv_update(n_list, addr, dict(msg)))
+    logger.debug("\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
+    update = recv_update(n_list, addr, json.loads(msg))
+    write_n_fi(n_fi,update)
+    logger.debug("\tupdate written out to file.")
     sleep(15)
 
 def rip_server(code, serv_port, rip_port,serv_fi):
@@ -153,7 +158,7 @@ def rip_server(code, serv_port, rip_port,serv_fi):
 
   try:
     ## sender thread
-    send_thread = threading.Thread(target=send_handler, args=(rip_sock,neigh,))
+    send_thread = threading.Thread(target=send_handler, args=(rip_sock,neigh,rip_port))
     send_thread.start()
   except Exception,e:
     logger.error("Sending Thread Error")
