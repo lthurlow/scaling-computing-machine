@@ -16,7 +16,6 @@ AN_code = \
 """
 ## host: update_time
 neighbors = {}
-import anhost
 import socket
 import os
 import os.path
@@ -26,6 +25,8 @@ import logging
 import logging.handlers
 import datetime
 import signal
+import anhost
+import anhost.rip
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -53,7 +54,8 @@ logger.debug("Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
   logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
-  rip_thread = threading.Thread(target=anhost.rip_server, args=(fi.read(),serv_port,net_port,route_fi,))
+  rip_thread = threading.Thread(target=anhost.rip.rip_server, args=(open(fi).read(),\
+                                serv_port,net_port,route_fi,))
   try:
     fi_o = open(route_fi,'w')
     fi_o.close()
