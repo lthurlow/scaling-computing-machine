@@ -141,9 +141,8 @@ def rip_server(code, serv_port, rip_port,serv_fi):
   x = open(neigh,'w')
   x.close()
   write_n_fi(neigh,{local_ip:[local_ip,0]})
-  
-  
-  logger.debug("\tinitial neighbor list: %s" % n_list)
+
+  logger.debug("\tinitial neighbor list: %s" % str(read_n_fi(neigh)))
 
   #set up rip server socket
   rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
