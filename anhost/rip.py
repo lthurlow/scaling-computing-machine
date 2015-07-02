@@ -68,12 +68,13 @@ def send_handler(sock,n_fi,port):
     send_update(sock, n_fi,port)
     time.sleep(10)
 
-def recv_update(n_fi, addr, update):
+def recv_update(neigh_fi,addr, update):
   add_list = []
   up_list = []
   dst_list = [x for x in up_list] # dst key list
+  neighbors = read_n_fi(neigh_fi)
   logger.debug("\tRECV_UPDATE")
-  logger.debug("\t\tupdate from: %s" % addr)
+  logger.debug("\t\tupdate from: %s" % addr[0])
   logger.debug("\t\toriginal list: %s" % neighbors)
   logger.debug("\t\tneighbor's list: %s" % update)
 
@@ -114,29 +115,33 @@ def recv_update(n_fi, addr, update):
         if k == i.keys()[0]:
            update_neighbors.update(up_list[i])
 
-  logger.debug(pprint.format(update_neighbors))
+  logger.debug(pprint.pformat(update_neighbors))
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
+  #try:
   while True:
     logger.debug("\taceepting messages...")
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\tmessage: %s" % msg)
     logger.debug("\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    update = recv_update(n_list, addr, json.loads(msg))
+    update = recv_update(n_fi,addr, json.loads(msg))
     write_n_fi(n_fi,update)
     logger.debug("\tupdate written out to file.")
-    sleep(15)
+    time.sleep(15)
+  #except Exception,e:
+  #  logger.error("Recver Error: %s" % str(e))
 
 def rip_server(code, serv_port, rip_port,serv_fi):
   neigh = "%s.rip" % rip_port
-  x = open(neigh,'w')
-  x.close()
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
   local_ip = anhost.get_ip_address("eth0")
   # dst : via, cost
-  n_list = {local_ip:[local_ip,0]}
+  x = open(neigh,'w')
+  x.close()
+  write_n_fi(neigh,{local_ip:[local_ip,0]})
+  
   
   logger.debug("\tinitial neighbor list: %s" % n_list)
 
