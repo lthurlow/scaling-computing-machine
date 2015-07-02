@@ -1,6 +1,8 @@
 import socket # for creating a socket
 import re # for pattern matching ip address
-import anhost # for all the active node things
+import sys
+sys.path.append("..")
+from anhost import anhost# for all the active node things
 
 dst = "172.31.13.99"
 src = anhost.get_ip_address("eth0")
@@ -25,8 +27,10 @@ import logging
 import logging.handlers
 import datetime
 import signal
-import anhost
-import anhost.rip
+import sys
+sys.path.append("..")
+from anhost import anhost
+from anhost import rip
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -54,7 +58,7 @@ logger.debug("Checking for File")
 ## if network server not running, start it
 if not os.path.exists(route_fi):
   logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
-  rip_thread = threading.Thread(target=anhost.rip.rip_server, args=(open(fi).read(),\
+  rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
                                 serv_port,net_port,route_fi,))
   try:
     fi_o = open(route_fi,'w')

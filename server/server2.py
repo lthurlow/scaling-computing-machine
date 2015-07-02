@@ -11,7 +11,9 @@ import time               # for sleeping
 import SocketServer       # for test server
 import threading          # for test thread server
 #import sys                # for sandbox output
-import anhost             # for all my active networks stuff
+import sys
+sys.path.append("..")
+from anhost import anhost             # for all my active networks stuff
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -90,6 +92,9 @@ def kill_processes():
       logger.info("Removing .route_rip")
       if os.path.exists(".route_rip"):
         os.remove(".route_rip")
+      logger.info("Removing 50000.rip")
+      if os.path.exists("50001.rip"):
+        os.remove("50001.rip")
     except Exception,e:
       logger.info("\tPrcoess %s unable to kill: %s" % (proc,str(e)))
 

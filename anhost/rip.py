@@ -5,8 +5,9 @@ import time
 import os
 import logging
 import logging.handlers
-import anhost
 import pprint
+import threading
+import anhost
 
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
@@ -50,8 +51,19 @@ def read_n_fi(n_fi):
 
 def send_update(sock,n_fi):
   logger.debug("sending update")
-  sock.sendto(n_list)
+  n_dict = read_n_fi(n_fi)
+  ip_self = sock.getsockname()[0]
+  logging.debug("send_update: want IP %s " % ip_self )
+  for k in n_dict:
+    if k != ip_self:
+      sock.sendto(k,n_dict)
   logger.debug("update sent")
+
+def send_handler(sock,n_fi):
+  while True:
+    logger.debug("Sending update")
+    send_update(sock, n_fi)
+    time.sleep(10)
 
 def recv_update(n_fi, addr, update):
   add_list = []
@@ -72,7 +84,6 @@ def recv_update(n_fi, addr, update):
       ## cost strictly less than, otherwise no upd
       if cost < neighbors[node][1]:
         up_list.append({node:[addr,cost]})
-
 
   logger.debug("added list: %s" % add_list)
   logger.debug("updated list: %s" % up_list)
@@ -103,11 +114,22 @@ def recv_update(n_fi, addr, update):
   logger.debug(pprint.format(update_neighbors))
   return update_neighbors
 
+def recv_handler(rip_sock,n_fi):
+  while True:
+    logger.debug("\taceepting messages...")
+    msg, addr = rip_sock.recvfrom(4096)
+    logger.debug("\tmessage: %s" % msg)
+    logger.debug("\tsender's addr: %s" %addr)
+    write_n_fi(n_fi,recv_update(n_list, addr, dict(msg)))
+    sleep(15)
+
 def rip_server(code, serv_port, rip_port,serv_fi):
   neigh = "%s.rip" % rip_port
+  x = open(neigh,'w')
+  x.close()
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
-  local_ip = get_ip_address("eth0")
+  local_ip = anhost.get_ip_address("eth0")
   # dst : via, cost
   n_list = {local_ip:[local_ip,0]}
   
@@ -122,19 +144,31 @@ def rip_server(code, serv_port, rip_port,serv_fi):
   send_broadcast(local_ip, code,serv_port)
 
   try:
-    while True:
-      logger.debug("\taceepting messages...")
-      msg, addr = rip_sock.recvfrom(4096)
-      logger.debug("\tmessage: %s" % msg)
-      logger.debug("\tsender's addr: %s" %addr)
-      n_list = recv_update(n_list, addr, dict(msg))
-      send_update(serv_sock, n_list)
-      time.sleep(10)
+    ## recver thread
+    recv_thread = threading.Thread(target=recv_handler, args=(rip_sock,neigh,))
+    recv_thread.start()
+  except Exception,e:
+    logger.error("Receving Thread Error")
+    raise Exception(e)
+
+  try:
+    ## sender thread
+    send_thread = threading.Thread(target=send_handler, args=(rip_sock,neigh,))
+    send_thread.start()
+  except Exception,e:
+    logger.error("Sending Thread Error")
+    raise Exception(e)
+
+  try:
+    recv_thread.join()
+    send_thread.join()
   except KeyboardInterrupt:
     logging.info("\tServer killed by Ctrl-C")
     os.remove(serv_fi)
     os.remove(neigh)
+    raise KeyboardInterrupt
   except Exception, e:
     logging.error("\tRIP Server Crash: %s" % e)
     os.remove(serv_fi)
     os.remove(neigh)
+    raise Exception(e)
