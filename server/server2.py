@@ -15,7 +15,7 @@ import sys
 sys.path.append("..")
 from anhost import anhost             # for all my active networks stuff
 
-FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)s %(message)s"
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
 #logger = logging.getLogger(FORMAT)
@@ -126,10 +126,6 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
       logger.debug("\tRemoving PID %s from list" % pid)
       PROCESS_TRACKER.remove(pid)
       logger.debug("\tUpdated PID List: %s" % PROCESS_TRACKER)
-      if os.path.exists(".route_rip"):
-        os.remove(".route_rip")
-      if os.path.exists("50001.rip"):
-        os.remove("50001.rip")
     except Exception, error:
       logger.error("\tThread Excecution Error: %s" % error)
       return_code_error(error, addr)

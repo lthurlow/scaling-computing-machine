@@ -10,7 +10,7 @@ import os
 import pprint as pp
 import signal
 
-FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 
 logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )

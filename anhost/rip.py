@@ -11,7 +11,7 @@ import anhost
 import json
 
 
-FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)s] %(levelname)20s %(message)s"
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 
 logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
@@ -33,12 +33,13 @@ def send_broadcast(local_ip,msg,port):
       sock.sendto(msg, (prefix+str(i),port))
     else:
       logger.debug(i)
-  logger.debug("broadcast done.")
+  logger.debug("\t\tbroadcast done.")
 
 def write_n_fi(n_fi, n_dict):
   x = open(n_fi,'w')
   for k in n_dict:
-    x.write(k+','+n_dict[k][0]+','+str(n_dict[k][1]))
+    logger.debug("\t\tWRITE: to file: %s" % (k+','+n_dict[k][0]+','+str(n_dict[k][1])))
+    x.write(k+','+n_dict[k][0]+','+str(n_dict[k][1])+'\n')
   x.close()
 
 def read_n_fi(n_fi):
@@ -46,12 +47,13 @@ def read_n_fi(n_fi):
   neighbor = {}
   for l in x:
     k = l.split(',')
+    logger.debug("\t\tREAD: from file: %s" % {k[0]:[k[1],int(k[2])]})
     neighbor.update({k[0]:[k[1],int(k[2])]})
   x.close()
   return neighbor
 
 def send_update(sock,n_fi,rip_port):
-  logger.debug("sending update")
+  logger.debug("\tSEND_UPDATE")
   n_dict = read_n_fi(n_fi)
   ip_self = sock.getsockname()[0]
   data_str = json.dumps(n_dict)
@@ -60,11 +62,11 @@ def send_update(sock,n_fi,rip_port):
   #for k in n_dict:
   #  if k != ip_self:
   #    sock.sendto(k,n_dict)
-  logger.debug("update sent")
+  logger.debug("\t\tupdate sent")
 
 def send_handler(sock,n_fi,port):
   while True:
-    logger.debug("Sending update")
+    logger.debug("SEND_HANDLER")
     send_update(sock, n_fi,port)
     time.sleep(10)
 
@@ -74,41 +76,49 @@ def recv_update(neigh_fi,addr, update):
   dst_list = [x for x in up_list] # dst key list
   neighbors = read_n_fi(neigh_fi)
   logger.debug("\tRECV_UPDATE")
-  logger.debug("\t\tupdate from: %s" % addr[0])
+  logger.debug("\t\tupdate from: %s" % addr)
   logger.debug("\t\toriginal list: %s" % neighbors)
   logger.debug("\t\tneighbor's list: %s" % update)
 
   #add newly discovered nodes
   for node in update:
     cost = update[node][1] + 1 #add cost to us
-    if node not in dst_list:
-      add_list.append({node:[addr,cost]})
-  #update old cost updates
-    else:
-      ## cost strictly less than, otherwise no upd
-      if cost < neighbors[node][1]:
-        up_list.append({node:[addr,cost]})
+    ## enfore no greater than 16 hops away
+    if cost <= 16:
+      if node not in dst_list:
+        add_list.append({str(node):[addr,cost]})
+      #update old cost updates
+      else:
+        ## cost strictly less than, otherwise no upd
+        if cost < neighbors[node][1]:
+          up_list.append({str(node):[addr,cost]})
 
-  logger.debug("added list: %s" % add_list)
-  logger.debug("updated list: %s" % up_list)
+  #logger.debug("added list: %s" % add_list)
+  #logger.debug("updated list: %s" % up_list)
 
-  # need to update and return our modified dict
+  ### need to update and return our modified dict
+  
+  #dst_list will now just be neighbor ip list
   dst_list = []
   if up_list:
     dst_list = [i.keys()[0] for i in up_list]
-    #for i in up_list:
-    #  dst_list.append(i.keys()[0])
-  # new dict
+
+  # create new neighbor dict
   update_neighbors = {}
   # add new entries
   for k in add_list:
-    update_nighbors.update(k)
+    update_neighbors.update(k)
+
+  #logger.info("dst_list: %s" % dst_list)
+  #logger.info("neighbors: %s" % neighbors)
+  #logger.info("update neigh: %s" % update_neighbors)
 
   # add original entries
   for k in neighbors:
-    # add original entries
+    # add original entries not seen on this round.
     if k not in dst_list:
-      update_neighbors.update(neighbors[k])
+      ## FIXME time penalty for not broadcasting. [TTL]
+      update_neighbors.update({k:neighbors[k]})
     # add updated entries
     else:
       for i in up_list:
@@ -119,16 +129,18 @@ def recv_update(neigh_fi,addr, update):
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
+  logger.debug("\tRECV_HANDLER")
   #try:
   while True:
-    logger.debug("\taceepting messages...")
+    logger.debug("\t\taceepting messages...")
     msg, addr = rip_sock.recvfrom(4096)
-    logger.debug("\tmessage: %s" % msg)
-    logger.debug("\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    update = recv_update(n_fi,addr, json.loads(msg))
+    logger.debug("\t\tmessage: %s" % msg)
+    logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
+    update = recv_update(n_fi,addr[0], json.loads(msg))
     write_n_fi(n_fi,update)
-    logger.debug("\tupdate written out to file.")
+    logger.debug("\t\tupdate written out to file.")
     time.sleep(15)
+    logger.info("UPDATED NEIGHBORS: %s" % pprint.pformat(read_n_fi(n_fi)))
   #except Exception,e:
   #  logger.error("Recver Error: %s" % str(e))
 
