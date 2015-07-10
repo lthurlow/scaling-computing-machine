@@ -14,6 +14,7 @@ import threading          # for test thread server
 import sys
 sys.path.append("..")
 from anhost import anhost             # for all my active networks stuff
+from anhost import inputs
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -24,8 +25,15 @@ socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
 
+
+
 INTERFACE = 'eth0'
 PORT = 50000
+inf, po = inputs.user()
+if inf:
+  INTERFACE = inf
+if po:
+  PORT = po
 HOST = str(anhost.get_ip_address(INTERFACE))
 PROCESS_TRACKER = []
 
