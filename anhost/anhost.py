@@ -34,7 +34,7 @@ class Route:
     self.iface = ""
     update = ""
   def set_ttl(self,dt):
-    self.update = datetime.strftime("%Y%j%H%M%S%f",dt)
+    self.update = time.strftime("%Y%j%H%M%S%f",dt)
   def get_ttl(self):
     return self.update
   def set_gw(self, gw):
@@ -76,7 +76,7 @@ class Route:
     if (type(rdict['TTL']) == str):
       self.update = rdict['TTL']
     else:
-      self.update = rdict['TTL'].strftime("%Y%j%H%M%S%f")
+      self.update = time.strftime("%Y%j%H%M%S%f",rdict['TTL'])
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)

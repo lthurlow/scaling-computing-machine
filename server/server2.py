@@ -87,9 +87,9 @@ def sandbox(command):
     raise Exception(e)
 
 def purge(pattern):
-  x = re.compile(r'(?:\d*\.|\.\w+_)[%s]\w+'%pattern):
+  x = re.compile(r'(?:\d*\.|\.\w+_)[%s]\w+'%pattern)
   for f in os.listdir("."):
-    if x.search(f).group():
+    if x.search(f):
       logger.debug("file removed: %s" % f)
       os.remove(f)
 
