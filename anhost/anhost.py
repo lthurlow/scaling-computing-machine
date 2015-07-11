@@ -34,25 +34,14 @@ class Route:
     self.iface = ""
     update = ""
   def set_ttl(self,dt):
-    self.update = time.strftime("%Y%j%H%M%S%f",dt)
+    self.update = dt.strftime("%Y%j%H%M%S%f")
   def get_ttl(self):
-    return self.update
+    return datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
   def set_gw(self, gw):
     self.gw = gw
   def get_gw(self):
     return self.gw
-  """
-  def __init__(self,d,g,m,f,me,r,u,i):
-    self.dst = d
-    self.gw = g
-    self.mask = m
-    self.flag = f
-    self.met = me
-    self.ref = r
-    self.use = u
-    self.iface = i
-  """
-  def get_route():
+  def get_route(self):
     rdict = {}
     rdict['Destination'] = self.dst
     rdict['Gateway'] = self.gw
@@ -62,8 +51,21 @@ class Route:
     rdict['Ref'] = self.ref
     rdict['Use'] = self.use
     rdict['Iface'] = self.iface
-    rdict['TTL'] = datetime.strptime(self.update,"%Y%j%H%M%S%f")
+    rdict['TTL'] = datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
     return  rdict
+  def transmit_route(self):
+    rdict = {}
+    rdict['Destination'] = self.dst
+    rdict['Gateway'] = self.gw
+    rdict['Genmask'] = self.mask
+    rdict['Flags'] = self.flag
+    rdict['Metric'] = self.met
+    rdict['Ref'] = self.ref
+    rdict['Use'] = self.use
+    rdict['Iface'] = self.iface
+    rdict['TTL'] = self.update
+    return  rdict
+
   def set_route(self,rdict):
     self.dst = rdict['Destination'] 
     self.gw = rdict['Gateway'] 
@@ -76,7 +78,7 @@ class Route:
     if (type(rdict['TTL']) == str):
       self.update = rdict['TTL']
     else:
-      self.update = time.strftime("%Y%j%H%M%S%f",rdict['TTL'])
+      self.update = rdict['TTL'].strftime("%Y%j%H%M%S%f")
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)

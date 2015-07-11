@@ -23,6 +23,13 @@ socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
 
+def str_to_dict(str_dict):
+  unicode_dict = json.loads(str_dict)
+  string_dict = {}
+  for k in unicode_dict:
+    string_dict[k.encode('utf-8')] = unicode_dict[k].encode('utf-8')
+  return string_dict
+
 def bit_mask(mask):
   x = mask.split(".")
   bc = 0
@@ -58,9 +65,11 @@ def read_n_fi(n_fi):
   x = open(n_fi,'r')
   neighbor = []
   for l in x:
-    logger.debug("\t\t\tloaded: %s" % json.loads(l))
-    neighbor.append(json.loads(l))
+    p = str_to_dict(l.strip())
+    logger.debug("\t\t\tloaded: %s" % p)
+    neighbor.append(p)
   x.close()
+  logger.info("%s" % neighbor)
   return neighbor
 
 def send_update(sock,n_fi,rip_port,dev):
@@ -76,7 +85,7 @@ def send_update(sock,n_fi,rip_port,dev):
     x.set_route(k)
     ## not a class, is dict?
     x.set_gw(anhost.get_ip_address(dev))
-    rip_update.append(x.get_route())
+    rip_update.append(x.transmit_route())
   data_str = json.dumps(rip_update)
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -201,7 +210,7 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
       l_route.append(route)
   write_n_fi(neigh,l_route)
 
-  logger.debug("\tinitial neighbor list: %s" % str(read_n_fi(neigh)))
+  logger.debug("\tinitial neighbor list: %s" % read_n_fi(neigh))
 
   #set up rip server socket
   rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
