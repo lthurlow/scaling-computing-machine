@@ -10,6 +10,48 @@ import os
 import pprint as pp
 import signal
 
+import subprocess
+from string import Template
+
+class Route:
+  dst = ""
+  gw = ""
+  mask = ""
+  flag = ""
+  met = ""
+  ref = ""
+  use = ""
+  iface = ""
+  def __init__(self,d,g,m,f,me,r,u,i):
+    self.dst = d
+    self.gw = g
+    self.mask = m
+    self.flag = f
+    self.met = me
+    self.ref = r
+    self.use = u
+    self.iface = i
+  def get_route():
+    rdict = {}
+    rdict['Destination'] = self.dst
+    rdict['Gateway'] = self.gw
+    rdict['Genmask'] = self.mask
+    rdict['Flags'] = self.flag
+    rdict['Metric'] = self.met
+    rdict['Ref'] = self.ref
+    rdict['Use'] = self.use
+    rdict['Iface'] = self.iface
+    return  rdict
+  def set_route(rdict):
+    self.dst = rdict['Destination'] 
+    self.gw = rdict['Gateway'] 
+    self.mask = rdict['Genmask'] 
+    self.flag = rdict['Flags']
+    self.met = rdict['Metric']
+    self.ref = rdict['Ref']
+    self.use = rdict['Use']
+    self.iface = rdict['Iface']
+
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 
@@ -62,32 +104,70 @@ def conv_hexip_to_dex(a):
 
 #get the ip routing table, return the contents
 def get_route_table():
+  output = subprocess.check_output(['route', '-nv'])
+  count = 0
+  keys = []
+  routes = []
+  for line in output.split('\n')[1:-1]:
+    if count == 0:
+      keys = line.split()
+    else:
+      route = {}
+      for i in xrange(0,len(keys)):
+        route[keys[i]] = line.split()[i]
+      routes.append(route)
+    count += 1
+  return routes
+
+#get the ip routing table, return the contents
+def non_default_routes():
+  output = subprocess.check_output(['route', '-nv'])
+  count = 0
+  keys = []
+  routes = []
+  for line in output.split('\n')[1:-1]:
+    if count == 0:
+      keys = line.split()
+    else:
+      route = {}
+      for i in xrange(0,len(keys)):
+        route[keys[i]] = line.split()[i]
+      if route["Destination"] != "0.0.0.0"
+        routes.append(route)
+    count += 1
+  return routes
+
+#Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+def set_route_table(rdict,flag="add"):
+  a =b =c =d =e = ""
+  for k in rdict:
+    if k == "Destination":
+      a=rdict[k]
+    elif k == "Gateway":
+      b=rdict[k]
+    elif k == "Genmask": 
+      c=rdict[k]
+    elif k == "Metric": 
+      d=rdict[k]
+    elif k == "Iface": 
+      e=rdict[k]
+    #elif k == "Ref": 
+    #elif k == "Flags":
   try:
-    route_f = open("/proc/net/route","r")
-    header = False
-    headers = []
-    entries = []
-    for line in route_f:
-      table = {}
-      if not header:
-        header = True
-        [headers.append(x) for x in re.findall(r'([a-zA-Z]+)',line)]
-        for x in headers:
-          table[x] = []
-      else:
-        row = re.findall(r'([a-zA-Z0-9]+)',line)
-        count = 0
-        for x in row:
-          if (headers[count] == 'Mask' or headers[count] == 'Destination' or\
-              headers[count] == 'Gateway'):
-            table[headers[count]] = conv_hexip_to_dex(x)
-          else:
-            table[headers[count]] = x
-          count += 1
-        entries.append({table[headers[0]]:table})
-    return entries
-  except Exception, e:
-    return str(e)
+    #gw cannot be 0.0.0.0
+    #cmd requires sudo access
+    cmd = ""
+    if flag == "add":
+      cmd = "route add -net %s netmask %s metric %s gw %s dev %s" % (a,c,d,b,e)
+    else:
+      cmd = "route del -net %s netmask %s metric %s gw %s dev %s" % (a,c,d,b,e)
+    cmd = cmd.split()
+    x = subprocess.call(cmd)
+    return x
+  except Exception,e:
+    logger.error("Unable to make changes to Kernel Routing Table")
+    logger.error(str(e))
+    return -1
 
 #get the device information for all interfaces
 def get_dev_info():
@@ -234,13 +314,13 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     logger.error("Error in chg_val: %s" % str(e))
     raise Exception(e)
 
-epoch = datetime.datetime.utcfromtimestamp(0)
 def get_time():
+  epoch = datetime.datetime.utcfromtimestamp(0)
   now = datetime.datetime.now()
   now -= epoch
   return float("%s.%s" % (now.seconds%60,now.microseconds/1000))
-  #return now.strftime("%s.%f")
 
+##FIXME
 def use_default_route():
   rtable = get_route_table()
   for eth in rtable:
