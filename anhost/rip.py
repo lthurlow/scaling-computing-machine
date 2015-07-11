@@ -90,12 +90,14 @@ def send_update(sock,n_fi,rip_port,dev):
     rip_update.append(x.transmit_route())
   data_str = json.dumps(rip_update)
 
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   #pull neighbors from updates, send to that set
-  for rip_neigh in rip_neighbors:
-    for route in rip_update:
-      sock.sendto(data_str, (rip_neigh,rip_port))
-      logger.debug("\t\tupdate sent to %s" % rip_neigh)
+  #for rip_neigh in rip_neighbors:
+  #  for route in rip_update:
+  #    sock.sendto(data_str, (rip_neigh,rip_port))
+  #    logger.debug("\t\tupdate sent to %s" % rip_neigh)
+  send_broadcast(anhost.get_ip_address(dev),data_str,rip_port):
+  
 
 
 def send_handler(sock,n_fi,port,dev):
