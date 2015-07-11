@@ -86,8 +86,15 @@ def sandbox(command):
     logger.error(str(e))
     raise Exception(e)
 
+def purge(pattern):
+  for f in os.listdir("."):
+    if re.search(pattern, f):
+      os.remove(f)
+
 def kill_processes():
   logger.debug("KILL_PROCESSES")
+  purge("route_rip*")
+  purge("*\.rip")
   for proc in PROCESS_TRACKER:
     try:
       #logger.info("Sending Hangup to %s" % proc)
@@ -97,12 +104,14 @@ def kill_processes():
       os.kill(proc,signal.SIGKILL)
       logger.info("Process %s killed" % proc)
       ##FIXME
-      logger.info("Removing .route_rip")
+      """
+      logger.info("Removing .route_rip*")
       if os.path.exists(".route_rip"):
-        os.remove(".route_rip")
-      logger.info("Removing 50000.rip")
+        os.remove(".route_rip*")
+      logger.info("Removing 50001.rip")
       if os.path.exists("50001.rip"):
-        os.remove("50001.rip")
+        os.remove("*.rip")
+      """
     except Exception,e:
       logger.info("\tPrcoess %s unable to kill: %s" % (proc,str(e)))
 

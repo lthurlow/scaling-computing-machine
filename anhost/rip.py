@@ -9,6 +9,8 @@ import pprint
 import threading
 import anhost
 import json
+import sys
+sys.path.append("..")
 import netaddr
 
 
@@ -48,7 +50,7 @@ def write_n_fi(n_fi, n_list):
   x = open(n_fi,'w')
   for k in n_list:
     logger.debug("\t\t\twriting: %s" % k)
-    x.write(k+'\n')
+    x.write(json.dumps(k)+'\n')
   x.close()
 
 def read_n_fi(n_fi):
@@ -70,7 +72,7 @@ def send_update(sock,n_fi,rip_port,dev):
   ## this node.
   rip_update = []
   for k in n_dict:
-    x = Route()
+    x = anhost.Route()
     x.set_route(k)
     ## not a class, is dict?
     x.set_gw(anhost.get_ip_address(dev))
@@ -104,7 +106,7 @@ def recv_update(neigh_fi,addr, update):
   logger.debug(pprint.pformat(update))
 
   for route in update:
-    x = Route()
+    x = anhost.Route()
     x.set_route(route)
     x.met += 1
     pprint.pprint(x)
@@ -182,11 +184,19 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
+  logger.debug("DEVICES: %s" % dev)
   local_ip = anhost.get_ip_address(dev)
   # dst : via, cost
   x = open(neigh,'w')
   x.close()
-  write_n_fi(neigh,{local_ip:[local_ip,0]})
+  #write_n_fi(neigh,{local_ip:[local_ip,0]})
+  routes = anhost.non_default_routes()
+  l_route = []
+  for route in routes:
+    ## FIXME for kvm - eth0 is management
+    if route["Iface"] != "eth0":
+      l_route.append(route)
+  write_n_fi(neigh,l_route)
 
   logger.debug("\tinitial neighbor list: %s" % str(read_n_fi(neigh)))
 

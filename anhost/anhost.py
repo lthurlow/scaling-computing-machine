@@ -37,9 +37,9 @@ class Route:
     self.update = dt
   def get_ttl(self):
     return self.update
-  def set_gw(self, gw)
+  def set_gw(self, gw):
     self.gw = gw
-  def get_gw(self)
+  def get_gw(self):
     return self.gw
   """
   def __init__(self,d,g,m,f,me,r,u,i):
@@ -155,7 +155,7 @@ def non_default_routes():
       route = {}
       for i in xrange(0,len(keys)):
         route[keys[i]] = line.split()[i]
-      if route["Destination"] != "0.0.0.0"
+      if route["Destination"] != "0.0.0.0":
         routes.append(route)
     count += 1
   return routes

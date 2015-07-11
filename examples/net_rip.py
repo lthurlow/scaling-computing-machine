@@ -57,14 +57,17 @@ signal.signal(signal.SIGHUP, signal_term_handler)
 logger.debug("Checking for File")
 ## if network server not running, start it
 iface_list = anhost.non_default_routes()
+logger.info("Non-default Routes: %s" % iface_list)
 for iface in iface_list:
-  route_fi+=str(iface["Iface"])
-  if not os.path.exists(route_fi) and iface != "eth0":
-    logger.debug("FILE DOES NOT EXIST: %s" % route_fi)
+  dev_iface = iface["Iface"]
+  t_fi = route_fi + dev_iface
+  ## FIXME for kvm - eth0 is management
+  if not os.path.exists(t_fi) and dev_iface != "eth0":
+    logger.debug("FILE DOES NOT EXIST: %s" % t_fi)
     rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
-                                  serv_port,net_port,route_fi,iface,))
+                                  serv_port,net_port,t_fi,dev_iface,))
     try:
-      fi_o = open(route_fi,'w')
+      fi_o = open(t_fi,'w')
       fi_o.close()
       logger.debug("%s Thread: RIP Server" % fi)
       logger.debug("PID: %s" % os.getpid())
@@ -78,13 +81,12 @@ for iface in iface_list:
       exit(10)
     except Exception,e:
       logger.error("error in %s: %s" % (fi,str(e)))
-      logger.error("deleting server file: %s" % route_fi)
-      if os.path.exists(route_fi):
-        os.remove(route_fi)
+      logger.error("deleting server file: %s" % t_fi)
+      if os.path.exists(t_fi):
+        os.remove(t_fi)
         raise Exception(e)
-    
-else:
-  logger.debug("ROUTE FILE EXISTS- EXIT")
+  else:
+    logger.debug("ROUTE FILE EXISTS- EXIT")
 
 exit(0)
 """
