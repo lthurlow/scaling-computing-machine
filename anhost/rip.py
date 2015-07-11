@@ -13,6 +13,7 @@ import sys
 sys.path.append("..")
 import netaddr
 
+rip_neighbors = []
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -90,10 +91,10 @@ def send_update(sock,n_fi,rip_port,dev):
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   #pull neighbors from updates, send to that set
-  for rip_neigh in n_dict:
-    target = rip_neigh['Gateway']
-    sock.sendto(data_str, (target,rip_port))
-    logger.debug("\t\tupdate sent to %s" % target)
+  for rip_neigh in rip_neighbors:
+    for route in rip_update:
+      sock.sendto(data_str, (rip_neigh,rip_port))
+      logger.debug("\t\tupdate sent to %s" % rip_neigh)
 
 
 def send_handler(sock,n_fi,port,dev):
@@ -181,6 +182,9 @@ def recv_handler(rip_sock,n_fi):
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\t\tmessage: %s" % msg)
     logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
+    ## FIXME need to tie rip_neighbors with a ttl and the route table
+    if addr[0] not in rip_neighbors:
+      rip_neighbors.append(addr[0])
     update = recv_update(n_fi,addr[0], json.loads(msg))
     write_n_fi(n_fi,update)
     logger.debug("\t\tupdate written out to file.")
