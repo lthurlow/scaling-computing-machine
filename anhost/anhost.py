@@ -34,7 +34,7 @@ class Route:
     self.iface = ""
     update = ""
   def set_ttl(self,dt):
-    self.update = datetime.datetime.strftime(dt,"%Y%j%H%M%S%f")
+    self.update = dt.strftime("%Y%j%H%M%S%f")
   def get_ttl(self):
     return datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
   def set_gw(self, gw):
@@ -69,7 +69,6 @@ class Route:
     rdict['Iface'] = self.iface
     rdict['TTL'] = self.update
     return  rdict
-
   def set_route(self,rdict):
     self.dst = rdict['Destination'] 
     self.gw = rdict['Gateway'] 
@@ -79,10 +78,14 @@ class Route:
     self.ref = rdict['Ref']
     self.use = rdict['Use']
     self.iface = rdict['Iface']
-    if (type(rdict['TTL']) == str):
-      self.update = rdict['TTL']
-    else:
-      self.update = datetime.datetime.strftime(rdict['TTL'],"%Y%j%H%M%S%f")
+    try:
+      if (type(rdict['TTL']) == str):
+        self.update = rdict['TTL']
+      else:
+        temp = datetime.datetime.strptime(rdict['TTL'],"%Y%j%H%M%S%f")
+        self.update = datetime.datetime.strftime(temp,"%Y%j%H%M%S%f")
+    except KeyError:
+      logger.error("KeyError with adding TTL")
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)

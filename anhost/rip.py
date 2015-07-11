@@ -116,30 +116,33 @@ def recv_update(neigh_fi,addr, update):
   current_time = datetime.datetime.now()
 
   #list of Routes
-  logger.debug(pprint.pformat(update))
+  #logger.debug(pprint.pformat(update))
 
   for route in update:
     x = anhost.Route()
     x.set_route(route)
     x.update_metric()
-    pprint.pprint(x)
-    if x.met <= 16:
-      net_str = convert_mask(x.dst,x.mask)
+    logger.debug("Update: %s" % pprint.pformat(x.get_route()))
+    if int(x.met) <= 16:
       bm = bit_mask(x.mask)
       network = netaddr.IPNetwork("%s/%s" % (x.dst,bm))
       there = False
       for neigh in neighbors:
-        bm = bit_mask(neigh.mask)
-        have_net = netaddr.IPNetwork("%s/%s" % (neigh.dst,bm))
+        y = anhost.Route()
+        y.set_route(neigh)
+        bm = bit_mask(y.mask)
+        have_net = netaddr.IPNetwork("%s/%s" % (y.dst,bm))
+        logger.debug("testing %s and %s" % (have_net,network))
         if network == have_net:
-          there = neighbors[neigh]
+          logger.debug("\tsame net, dropping")
+          there = True
+          ## FIXME should make it as int through get function
+          if int(x.met) < int(y.met):
+            up_list.append(x)
           break
-      if there:
+      if not there:
+        logger.debug("adding: %s" % x.get_route())
         add_list.append(x)
-      else:
-        ## FIXME should make it as int through get function
-        if int(x.met) < int(there.met):
-          up_list.append(x)
 
   logger.info("neighbors before add: %s" % neighbors)
   logger.debug("added list: %s" % add_list)
@@ -151,7 +154,7 @@ def recv_update(neigh_fi,addr, update):
   # add new entries
   for k in add_list:
     k.set_ttl(current_time)
-    update_neighbors.append(k.get_route())
+    update_neighbors.append(k.transmit_route())
     ##FIXME: add to linux route table
 
   #logger.info("dst_list: %s" % dst_list)
@@ -161,21 +164,23 @@ def recv_update(neigh_fi,addr, update):
   ## add new updates to replace originals in this update
   for k in up_list:
     k.set_ttl(current_time)
-    update_neighbors.append(k.get_route())
+    update_neighbors.append(k.transmit_route())
   
   ## add original entries not seen in this update
   ## by not adding above, we remove all update entries
   for k in neighbors:
     if k not in update_neighbors:
-      if (current_time-k.get_ttl() > datetime.timedelta(minutes=1)):
+      r = anhost.Route()
+      r.set_route(k)
+      if (current_time-r.get_ttl() > datetime.timedelta(minutes=1)):
         logger.info("Route timeout: %s" % k)
-        logger.info("current time %s, last update %s"%(current_time,k.get_ttl()))
+        logger.info("current time %s, last update %s"%(current_time,r.get_ttl()))
       else:
-        update_neighbors.append(k.get_route())
+        update_neighbors.append(r.transmit_route())
     ## delete the current linux route table information
     ## FIXME: else:
 
-  logger.debug(pprint.pformat(update_neighbors))
+  logger.debug("New route table: %s" % pprint.pformat(update_neighbors))
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
@@ -207,7 +212,6 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   # dst : via, cost
   x = open(neigh,'w')
   x.close()
-  #write_n_fi(neigh,{local_ip:[local_ip,0]})
   routes = anhost.non_default_routes()
   l_route = []
   for route in routes:
@@ -215,8 +219,10 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
     if route["Iface"] != "eth0":
       ## default routes gets linux, but now we need to add arbitrary ttl for rip
       ##FIXME change get_routes to use Routes()
-      route["TTL"] = datetime.datetime.now().strftime("%Y%j%H%M%S%f")
-      l_route.append(route)
+      x = anhost.Route()
+      x.set_route(route)
+      x.set_ttl(datetime.datetime.now())
+      l_route.append(x.transmit_route())
   write_n_fi(neigh,l_route)
 
   logger.debug("\tinitial neighbor list: %s" % read_n_fi(neigh))
