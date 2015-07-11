@@ -32,9 +32,9 @@ class Route:
     self.ref = 0
     self.use = 0
     self.iface = ""
-    update = datetime.datetime.now()
+    update = ""
   def set_ttl(self,dt):
-    self.update = dt
+    self.update = datetime.strftime("%Y%j%H%M%S%f",dt)
   def get_ttl(self):
     return self.update
   def set_gw(self, gw):
@@ -62,7 +62,7 @@ class Route:
     rdict['Ref'] = self.ref
     rdict['Use'] = self.use
     rdict['Iface'] = self.iface
-    rdict['TTL'] = self.update
+    rdict['TTL'] = datetime.strptime(self.update,"%Y%j%H%M%S%f")
     return  rdict
   def set_route(self,rdict):
     self.dst = rdict['Destination'] 
@@ -73,7 +73,10 @@ class Route:
     self.ref = rdict['Ref']
     self.use = rdict['Use']
     self.iface = rdict['Iface']
-    self.update = rdict['TTL']
+    if (type(rdict['TTL']) == str):
+      self.update = rdict['TTL']
+    else:
+      self.update = rdict['TTL'].strftime("%Y%j%H%M%S%f")
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)

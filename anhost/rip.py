@@ -195,6 +195,9 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   for route in routes:
     ## FIXME for kvm - eth0 is management
     if route["Iface"] != "eth0":
+      ## default routes gets linux, but now we need to add arbitrary ttl for rip
+      ##FIXME change get_routes to use Routes()
+      route["TTL"] = datetime.datetime.now().strftime("%Y%j%H%M%S%f")
       l_route.append(route)
   write_n_fi(neigh,l_route)
 
