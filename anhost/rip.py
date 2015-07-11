@@ -74,6 +74,7 @@ def read_n_fi(n_fi):
   return neighbor
 
 def send_update(sock,n_fi,rip_port,dev):
+  global rip_neighbors
   logger.debug("\tSEND_UPDATE")
   ## list of dicts
   n_dict = read_n_fi(n_fi)
@@ -175,6 +176,7 @@ def recv_update(neigh_fi,addr, update):
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
+  global rip_neighbors
   logger.debug("\tRECV_HANDLER")
   #try:
   while True:
