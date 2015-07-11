@@ -96,7 +96,7 @@ def send_update(sock,n_fi,rip_port,dev):
   #  for route in rip_update:
   #    sock.sendto(data_str, (rip_neigh,rip_port))
   #    logger.debug("\t\tupdate sent to %s" % rip_neigh)
-  send_broadcast(anhost.get_ip_address(dev),data_str,rip_port):
+  send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
   
 
 
@@ -121,7 +121,7 @@ def recv_update(neigh_fi,addr, update):
   for route in update:
     x = anhost.Route()
     x.set_route(route)
-    x.met += 1
+    x.update_metric()
     pprint.pprint(x)
     if x.met <= 16:
       net_str = convert_mask(x.dst,x.mask)
@@ -137,7 +137,8 @@ def recv_update(neigh_fi,addr, update):
       if there:
         add_list.append(x)
       else:
-        if x.met < there.met:
+        ## FIXME should make it as int through get function
+        if int(x.met) < int(there.met):
           up_list.append(x)
 
   logger.info("neighbors before add: %s" % neighbors)

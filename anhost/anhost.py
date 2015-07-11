@@ -34,13 +34,17 @@ class Route:
     self.iface = ""
     update = ""
   def set_ttl(self,dt):
-    self.update = dt.strftime("%Y%j%H%M%S%f")
+    self.update = datetime.datetime.strftime(dt,"%Y%j%H%M%S%f")
   def get_ttl(self):
     return datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
   def set_gw(self, gw):
     self.gw = gw
   def get_gw(self):
     return self.gw
+  def update_metric(self):
+    as_int = int(self.met)
+    as_int += 1
+    self.met = str(as_int)
   def get_route(self):
     rdict = {}
     rdict['Destination'] = self.dst
@@ -78,7 +82,7 @@ class Route:
     if (type(rdict['TTL']) == str):
       self.update = rdict['TTL']
     else:
-      self.update = rdict['TTL'].strftime("%Y%j%H%M%S%f")
+      self.update = datetime.datetime.strftime(rdict['TTL'],"%Y%j%H%M%S%f")
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
