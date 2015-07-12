@@ -18,10 +18,30 @@ class Route:
   gw = ""
   mask = ""
   flag = ""
-  met = ""
-  ref = ""
-  use = ""
+  met = 0
+  ref = 0
+  use = 0
   iface = ""
+  update = 0
+  def __init__(self):
+    self.dst = ""
+    self.gw = ""
+    self.mask = ""
+    self.flag = ""
+    self.met = 0
+    self.ref = 0
+    self.use = 0
+    self.iface = ""
+    update = datetime.datetime.now()
+  def set_ttl(self,dt):
+    self.update = dt
+  def get_ttl(self):
+    return self.update
+  def set_gw(self, gw)
+    self.gw = gw
+  def get_gw(self)
+    return self.gw
+  """
   def __init__(self,d,g,m,f,me,r,u,i):
     self.dst = d
     self.gw = g
@@ -31,6 +51,7 @@ class Route:
     self.ref = r
     self.use = u
     self.iface = i
+  """
   def get_route():
     rdict = {}
     rdict['Destination'] = self.dst
@@ -41,8 +62,9 @@ class Route:
     rdict['Ref'] = self.ref
     rdict['Use'] = self.use
     rdict['Iface'] = self.iface
+    rdict['TTL'] = self.update
     return  rdict
-  def set_route(rdict):
+  def set_route(self,rdict):
     self.dst = rdict['Destination'] 
     self.gw = rdict['Gateway'] 
     self.mask = rdict['Genmask'] 
@@ -51,6 +73,7 @@ class Route:
     self.ref = rdict['Ref']
     self.use = rdict['Use']
     self.iface = rdict['Iface']
+    self.update = rdict['TTL']
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)

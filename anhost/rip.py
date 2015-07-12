@@ -9,6 +9,7 @@ import pprint
 import threading
 import anhost
 import json
+import netaddr
 
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
@@ -19,6 +20,13 @@ logger.setLevel(logging.DEBUG)
 socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
+
+def bit_mask(mask):
+  x = mask.split(".")
+  bc = 0
+  for k in x:
+    bc += bin(int(k)).count("1")
+  return str(bc)
 
 ## short simple code to just broadcast unicast message
 def send_broadcast(local_ip,msg,port):
@@ -35,95 +43,121 @@ def send_broadcast(local_ip,msg,port):
       logger.debug(i)
   logger.debug("\t\tbroadcast done.")
 
-def write_n_fi(n_fi, n_dict):
+def write_n_fi(n_fi, n_list):
+  logger.debug("\t\tWRITE_N_FI")
   x = open(n_fi,'w')
-  for k in n_dict:
-    logger.debug("\t\tWRITE: to file: %s" % (k+','+n_dict[k][0]+','+str(n_dict[k][1])))
-    x.write(k+','+n_dict[k][0]+','+str(n_dict[k][1])+'\n')
+  for k in n_list:
+    logger.debug("\t\t\twriting: %s" % k)
+    x.write(k+'\n')
   x.close()
 
 def read_n_fi(n_fi):
+  logger.debug("\t\tREAD_N_FI")
   x = open(n_fi,'r')
-  neighbor = {}
+  neighbor = []
   for l in x:
-    k = l.split(',')
-    logger.debug("\t\tREAD: from file: %s" % {k[0]:[k[1],int(k[2])]})
-    neighbor.update({k[0]:[k[1],int(k[2])]})
+    logger.debug("\t\t\tloaded: %s" % json.loads(l))
+    neighbor.append(json.loads(l))
   x.close()
   return neighbor
 
-def send_update(sock,n_fi,rip_port):
+def send_update(sock,n_fi,rip_port,dev):
   logger.debug("\tSEND_UPDATE")
+  ## list of dicts
   n_dict = read_n_fi(n_fi)
   ip_self = sock.getsockname()[0]
-  data_str = json.dumps(n_dict)
-  send_broadcast(ip_self,data_str,rip_port)
-  #FIXME, dont broadcast
-  #for k in n_dict:
-  #  if k != ip_self:
-  #    sock.sendto(k,n_dict)
-  logger.debug("\t\tupdate sent")
+  ## before we send out, we should update the gateway to be
+  ## this node.
+  rip_update = []
+  for k in n_dict:
+    x = Route()
+    x.set_route(k)
+    ## not a class, is dict?
+    x.set_gw(anhost.get_ip_address(dev))
+    rip_update.append(x.get_route())
+  data_str = json.dumps(rip_update)
 
-def send_handler(sock,n_fi,port):
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  #pull neighbors from updates, send to that set
+  for rip_neigh in n_dict:
+    target = rip_neigh['Gateway']
+    sock.sendto(data_str, (target,rip_port))
+    logger.debug("\t\tupdate sent to %s" % target)
+
+
+def send_handler(sock,n_fi,port,dev):
   while True:
     logger.debug("SEND_HANDLER")
-    send_update(sock, n_fi,port)
+    send_update(sock, n_fi,port,dev)
     time.sleep(10)
 
+#FIXME: add routes to linux routing table
 def recv_update(neigh_fi,addr, update):
   add_list = []
   up_list = []
-  dst_list = [x for x in up_list] # dst key list
   neighbors = read_n_fi(neigh_fi)
   logger.debug("\tRECV_UPDATE")
   logger.debug("\t\tupdate from: %s" % addr)
-  logger.debug("\t\toriginal list: %s" % neighbors)
-  logger.debug("\t\tneighbor's list: %s" % update)
+  current_time = datetime.datetime.now()
 
-  #add newly discovered nodes
-  for node in update:
-    cost = update[node][1] + 1 #add cost to us
-    ## enfore no greater than 16 hops away
-    if cost <= 16:
-      if node not in dst_list:
-        add_list.append({str(node):[addr,cost]})
-      #update old cost updates
+  #list of Routes
+  logger.debug(pprint.pformat(update))
+
+  for route in update:
+    x = Route()
+    x.set_route(route)
+    x.met += 1
+    pprint.pprint(x)
+    if x.met <= 16:
+      net_str = convert_mask(x.dst,x.mask)
+      bm = bit_mask(x.mask)
+      network = netaddr.IPNetwork("%s/%s" % (x.dst,bm))
+      there = False
+      for neigh in neighbors:
+        bm = bit_mask(neigh.mask)
+        have_net = netaddr.IPNetwork("%s/%s" % (neigh.dst,bm))
+        if network == have_net:
+          there = neighbors[neigh]
+          break
+      if there:
+        add_list.append(x)
       else:
-        ## cost strictly less than, otherwise no upd
-        if cost < neighbors[node][1]:
-          up_list.append({str(node):[addr,cost]})
+        if x.met < there.met:
+          up_list.append(x)
 
-  #logger.debug("added list: %s" % add_list)
-  #logger.debug("updated list: %s" % up_list)
+  logger.info("neighbors before add: %s" % neighbors)
+  logger.debug("added list: %s" % add_list)
+  logger.debug("updated list: %s" % up_list)
 
   ### need to update and return our modified dict
-  
-  #dst_list will now just be neighbor ip list
-  dst_list = []
-  if up_list:
-    dst_list = [i.keys()[0] for i in up_list]
-
-  # create new neighbor dict
-  update_neighbors = {}
+  # create new neighbor list
+  update_neighbors = []
   # add new entries
   for k in add_list:
-    update_neighbors.update(k)
+    k.set_ttl(current_time)
+    update_neighbors.append(k.get_route())
+    ##FIXME: add to linux route table
 
   #logger.info("dst_list: %s" % dst_list)
   #logger.info("neighbors: %s" % neighbors)
-  #logger.info("update neigh: %s" % update_neighbors)
+  logger.info("update neigh: %s" % update_neighbors)
 
-  # add original entries
+  ## add new updates to replace originals in this update
+  for k in up_list:
+    k.set_ttl(current_time)
+    update_neighbors.append(k.get_route())
+  
+  ## add original entries not seen in this update
+  ## by not adding above, we remove all update entries
   for k in neighbors:
-    # add original entries not seen on this round.
-    if k not in dst_list:
-      ## FIXME time penalty for not broadcasting. [TTL]
-      update_neighbors.update({k:neighbors[k]})
-    # add updated entries
-    else:
-      for i in up_list:
-        if k == i.keys()[0]:
-           update_neighbors.update(up_list[i])
+    if k not in update_neighbors:
+      if (current_time-k.get_ttl() > datetime.timedelta(minutes=1)):
+        logger.info("Route timeout: %s" % k)
+        logger.info("current time %s, last update %s"%(current_time,k.get_ttl()))
+      else:
+        update_neighbors.append(k.get_route())
+    ## delete the current linux route table information
+    ## FIXME: else:
 
   logger.debug(pprint.pformat(update_neighbors))
   return update_neighbors
@@ -144,11 +178,11 @@ def recv_handler(rip_sock,n_fi):
   #except Exception,e:
   #  logger.error("Recver Error: %s" % str(e))
 
-def rip_server(code, serv_port, rip_port,serv_fi):
+def rip_server(code, serv_port, rip_port,serv_fi, dev):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
-  local_ip = anhost.get_ip_address("eth0")
+  local_ip = anhost.get_ip_address(dev)
   # dst : via, cost
   x = open(neigh,'w')
   x.close()
@@ -174,7 +208,8 @@ def rip_server(code, serv_port, rip_port,serv_fi):
 
   try:
     ## sender thread
-    send_thread = threading.Thread(target=send_handler, args=(rip_sock,neigh,rip_port))
+    send_thread = threading.Thread(target=send_handler,\
+                  args=(rip_sock,neigh,rip_port,dev,))
     send_thread.start()
   except Exception,e:
     logger.error("Sending Thread Error")
