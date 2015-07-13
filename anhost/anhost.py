@@ -87,6 +87,15 @@ class Route:
     except KeyError:
       logger.error("KeyError with adding TTL")
 
+def same_route(r1,r2):
+  if r1['Destination'] == r2['Destination'] and \
+     r1['Gateway'] == r2['Gateway'] and \
+     r1['Genmask'] == r2['Genmask'] and \
+     r1['Metric'] == r2['Metric']:
+    return True
+  else:
+    return False
+    
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 
@@ -112,6 +121,15 @@ def get_int_ip():
   ip = [str(int(str(l),16)) for l in ip_num]
   return '.'.join(ip)
 
+def send_to_local_interfaces(msg,dev_iface,port):
+  logger.debug("\t\tSEND_TO_ALL_INTERFACES")
+  iface_list = anhost.non_default_routes()
+  #logger.debug("Non-default Routes: %s" % iface_list)
+  for iface in iface_list:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    iface_ip = anhost.get_ip_address(dev_iface)
+    logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,port))
+    sock.sendto(msg, (iface_ip,port))
 
 #get access to the arp table, return the contents
 def get_arp_table():

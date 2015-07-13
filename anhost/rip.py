@@ -73,6 +73,28 @@ def read_n_fi(n_fi):
   logger.info("%s" % neighbor)
   return neighbor
 
+def check_timeout(fi,neighbors):
+  logger.debug("\t\tCHECK_TIMEOUT")
+  current_time = datetime.datetime.now()
+  new_neigh = []
+
+  for k in neighbors:
+    r = anhost.Route()
+    r.set_route(k)
+    ## this will make our default routes in the lists not be dropped.
+    if r.get_gw() != "0.0.0.0":
+      if (current_time-r.get_ttl() > datetime.timedelta(minutes=1)):
+        logger.info("Route timeout: %s" % k)
+        logger.info("Current time %s, last update %s"%(current_time,r.get_ttl()))
+      else:
+        new_neigh.append(r.transmit_route())
+    else:
+      new_neigh.append(r.transmit_route())
+
+  logger.debug("Route table after Check: %s" % new_neigh)
+  write_n_fi(fi,new_neigh)
+  return new_neigh
+
 def send_update(sock,n_fi,rip_port,dev):
   global rip_neighbors
   logger.debug("\tSEND_UPDATE")
@@ -86,17 +108,22 @@ def send_update(sock,n_fi,rip_port,dev):
     x = anhost.Route()
     x.set_route(k)
     ## not a class, is dict?
-    x.set_gw(anhost.get_ip_address(dev))
+    #x.set_gw(anhost.get_ip_address(dev))
     rip_update.append(x.transmit_route())
-  data_str = json.dumps(rip_update)
 
-  #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  #pull neighbors from updates, send to that set
-  #for rip_neigh in rip_neighbors:
-  #  for route in rip_update:
-  #    sock.sendto(data_str, (rip_neigh,rip_port))
-  #    logger.debug("\t\tupdate sent to %s" % rip_neigh)
+  rip_update = check_timeout(n_fi,rip_update)
+  rip_checked = []
+  for k in rip_update:
+    x = anhost.Route()
+    x.set_route(k)
+    x.set_gw(anhost.get_ip_address(dev))
+    rip_checked.append(x.transmit_route())
+  
+ 
+  data_str = json.dumps(rip_checked)
+
   send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
+  anhost.send_to_local_interfaces(data_str,dev,rip_port)
   
 
 
@@ -115,14 +142,11 @@ def recv_update(neigh_fi,addr, update):
   logger.debug("\t\tupdate from: %s" % addr)
   current_time = datetime.datetime.now()
 
-  #list of Routes
-  #logger.debug(pprint.pformat(update))
-
   for route in update:
     x = anhost.Route()
     x.set_route(route)
     x.update_metric()
-    logger.debug("Update: %s" % pprint.pformat(x.get_route()))
+    logger.debug("\t\t\tUpdate: %s" % x.get_route())
     if int(x.met) <= 16:
       bm = bit_mask(x.mask)
       network = netaddr.IPNetwork("%s/%s" % (x.dst,bm))
@@ -132,21 +156,21 @@ def recv_update(neigh_fi,addr, update):
         y.set_route(neigh)
         bm = bit_mask(y.mask)
         have_net = netaddr.IPNetwork("%s/%s" % (y.dst,bm))
-        logger.debug("testing %s and %s" % (have_net,network))
+        logger.debug("\t\t\ttesting %s and %s" % (have_net,network))
         if network == have_net:
-          logger.debug("\tsame net, dropping")
+          logger.debug("\t\t\tsame net, dropping")
           there = True
           ## FIXME should make it as int through get function
           if int(x.met) < int(y.met):
             up_list.append(x)
           break
       if not there:
-        logger.debug("adding: %s" % x.get_route())
+        logger.debug("\t\t\tadding: %s" % x.get_route())
         add_list.append(x)
 
-  logger.info("neighbors before add: %s" % neighbors)
-  logger.debug("added list: %s" % add_list)
-  logger.debug("updated list: %s" % up_list)
+  logger.info("\t\tneighbors before add: %s" % neighbors)
+  logger.debug("\t\tadded list: %s" % add_list)
+  logger.debug("\t\tupdated list: %s" % up_list)
 
   ### need to update and return our modified dict
   # create new neighbor list
@@ -159,7 +183,7 @@ def recv_update(neigh_fi,addr, update):
 
   #logger.info("dst_list: %s" % dst_list)
   #logger.info("neighbors: %s" % neighbors)
-  logger.info("update neigh: %s" % update_neighbors)
+  #logger.info("update neigh: %s" % update_neighbors)
 
   ## add new updates to replace originals in this update
   for k in up_list:
@@ -173,14 +197,14 @@ def recv_update(neigh_fi,addr, update):
       r = anhost.Route()
       r.set_route(k)
       if (current_time-r.get_ttl() > datetime.timedelta(minutes=1)):
-        logger.info("Route timeout: %s" % k)
-        logger.info("current time %s, last update %s"%(current_time,r.get_ttl()))
+        logger.info("\t\tRoute timeout: %s" % k)
+        logger.info("\t\tcurrent time %s, last update %s"%(current_time,r.get_ttl()))
       else:
         update_neighbors.append(r.transmit_route())
     ## delete the current linux route table information
     ## FIXME: else:
 
-  logger.debug("New route table: %s" % pprint.pformat(update_neighbors))
+  logger.debug("\t\tNew route table: %s" % update_neighbors)
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
@@ -199,7 +223,7 @@ def recv_handler(rip_sock,n_fi):
     write_n_fi(n_fi,update)
     logger.debug("\t\tupdate written out to file.")
     time.sleep(15)
-    logger.info("UPDATED NEIGHBORS: %s" % pprint.pformat(read_n_fi(n_fi)))
+    logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(n_fi))
   #except Exception,e:
   #  logger.error("Recver Error: %s" % str(e))
 
