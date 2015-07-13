@@ -79,15 +79,15 @@ def check_timeout(fi,neighbors):
     r.set_route(k)
     ## this will make our default routes in the lists not be dropped.
     if r.get_gw() != "0.0.0.0":
-      if (current_time-r.get_ttl() > datetime.timedelta(minutes=1)):
+      if (current_time-r.get_ttl() > datetime.timedelta(minutes=2)):
         logger.info("Route timeout: %s" % k)
-        logger.info("Current time %s, last update %s"%(current_time,r.get_ttl()))
+        logger.info("\t\t\tCurrent time %s, last update %s"%(current_time,r.get_ttl()))
       else:
         new_neigh.append(r.transmit_route())
     else:
       new_neigh.append(r.transmit_route())
 
-  logger.debug("Route table after Check: %s" % new_neigh)
+  logger.debug("\t\t\tRoute table after Check: %s" % new_neigh)
   write_n_fi(fi,new_neigh)
   return new_neigh
 
@@ -116,6 +116,7 @@ def send_update(sock,n_fi,rip_port,dev):
   
  
   data_str = json.dumps(rip_checked)
+  logger.debug("\t\tMSG: %s" % data_str)
 
   anhost.send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
   anhost.send_to_local_interfaces(data_str,dev,rip_port)
@@ -135,7 +136,9 @@ def recv_update(neigh_fi,addr, update):
   neighbors = read_n_fi(neigh_fi)
   logger.debug("\tRECV_UPDATE")
   logger.debug("\t\tupdate from: %s" % addr)
-  neighbors = update_ttls(neighbors)
+  logger.debug("\t\t\tmsg: %s" % update)
+  
+  #neighbors = update_ttls(neighbors)
   neighbors = check_timeout(neigh_fi,neighbors)
   current_time = datetime.datetime.now()
 
@@ -143,8 +146,8 @@ def recv_update(neigh_fi,addr, update):
     x = anhost.Route()
     x.set_route(route)
     x.update_metric()
-    logger.debug("\t\t\tUpdate: %s" % x.get_route())
-    if int(x.met) <= 16:
+    # RIP prevent CTI
+    if int(x.met) < 16:
       bm = bit_mask(x.mask)
       network = netaddr.IPNetwork("%s/%s" % (x.dst,bm))
       there = False
@@ -155,19 +158,19 @@ def recv_update(neigh_fi,addr, update):
         have_net = netaddr.IPNetwork("%s/%s" % (y.dst,bm))
         logger.debug("\t\t\ttesting %s and %s" % (have_net,network))
         if network == have_net:
-          logger.debug("\t\t\tsame net, dropping")
+          logger.debug("\t\t\tsame net")
           there = True
-          ## FIXME should make it as int through get function
           if x.get_count() < y.get_count():
+            logger.debug("\t\t\tUPDATING W/ better hop: %s" % x.get_route())
             up_list.append(x)
+          else:
+            logger.debug("\t\t\tUPDATING old route: %s" % y.get_route())
+            up_list.append(y)
           break
       if not there:
-        logger.debug("\t\t\tadding: %s" % x.get_route())
+        logger.debug("\t\t\tADDING: %s" % x.get_route())
         add_list.append(x)
 
-  logger.info("\t\tneighbors before add: %s" % neighbors)
-  logger.debug("\t\tadded list: %s" % add_list)
-  logger.debug("\t\tupdated list: %s" % up_list)
 
   ### need to update and return our modified dict
   # create new neighbor list
@@ -178,38 +181,13 @@ def recv_update(neigh_fi,addr, update):
     update_neighbors.append(k.transmit_route())
     ##FIXME: add to linux route table
 
-  #logger.info("dst_list: %s" % dst_list)
-  #logger.info("neighbors: %s" % neighbors)
-  #logger.info("update neigh: %s" % update_neighbors)
-
   ## add new updates to replace originals in this update
   for k in up_list:
     k.set_ttl(current_time)
     update_neighbors.append(k.transmit_route())
   
-  for k in neighbors:
-    if k not in update_neighbors:
-      r = anhost.Route()
-      r.set_route(k)
-      update_neighbors.append(r.transmit_route())
 
-  """
-  ## add original entries not seen in this update
-  ## by not adding above, we remove all update entries
-  for k in neighbors:
-    if k not in update_neighbors:
-      r = anhost.Route()
-      r.set_route(k)
-      if (current_time-r.get_ttl() > datetime.timedelta(minutes=1)):
-        logger.info("\t\tRoute timeout: %s" % k)
-        logger.info("\t\tcurrent time %s, last update %s"%(current_time,r.get_ttl()))
-      else:
-        update_neighbors.append(r.transmit_route())
-    ## delete the current linux route table information
-    ## FIXME: else:
-  """
-
-  logger.debug("\t\tNew route table: %s" % update_neighbors)
+  logger.info("FINAL route table: %s" % update_neighbors)
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
