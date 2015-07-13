@@ -13,8 +13,6 @@ import sys
 sys.path.append("..")
 import netaddr
 
-rip_neighbors = []
-
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
 logging.basicConfig(format=FORMAT)
 
@@ -38,21 +36,6 @@ def bit_mask(mask):
     bc += bin(int(k)).count("1")
   return str(bc)
 
-## short simple code to just broadcast unicast message
-def send_broadcast(local_ip,msg,port):
-  logger.debug("\tSEND_BROADCAST")
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  prefix = '.'.join(local_ip.split(".")[0:3])+'.'
-  suff = local_ip.split(".")[-1]
-  logger.debug("\t\tbroadcasting to: %s*" % prefix)
-  logger.debug("\t\tnot sending to: %s" % prefix+suff)
-  for i in range(1,254):
-    if i != int(suff):
-      sock.sendto(msg, (prefix+str(i),port))
-    else:
-      logger.debug(i)
-  logger.debug("\t\tbroadcast done.")
-
 def write_n_fi(n_fi, n_list):
   logger.debug("\t\tWRITE_N_FI")
   x = open(n_fi,'w')
@@ -73,6 +56,19 @@ def read_n_fi(n_fi):
   logger.info("%s" % neighbor)
   return neighbor
 
+def update_ttls(neighbors):
+  logger.debug("\t\tUPDATE_TTLS")
+  current_time = datetime.datetime.now()
+  n_neigh = []
+  for k in neighbors:
+    p = anhost.Route()
+    p.set_route(k)
+    p.set_ttl(current_time)
+    n_neigh.append(p.transmit_route())
+    logger.debug("updated ttl: %s" % p.get_route())
+  return n_neigh
+    
+  
 def check_timeout(fi,neighbors):
   logger.debug("\t\tCHECK_TIMEOUT")
   current_time = datetime.datetime.now()
@@ -96,7 +92,6 @@ def check_timeout(fi,neighbors):
   return new_neigh
 
 def send_update(sock,n_fi,rip_port,dev):
-  global rip_neighbors
   logger.debug("\tSEND_UPDATE")
   ## list of dicts
   n_dict = read_n_fi(n_fi)
@@ -122,7 +117,7 @@ def send_update(sock,n_fi,rip_port,dev):
  
   data_str = json.dumps(rip_checked)
 
-  send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
+  anhost.send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
   anhost.send_to_local_interfaces(data_str,dev,rip_port)
   
 
@@ -140,6 +135,8 @@ def recv_update(neigh_fi,addr, update):
   neighbors = read_n_fi(neigh_fi)
   logger.debug("\tRECV_UPDATE")
   logger.debug("\t\tupdate from: %s" % addr)
+  neighbors = update_ttls(neighbors)
+  neighbors = check_timeout(neigh_fi,neighbors)
   current_time = datetime.datetime.now()
 
   for route in update:
@@ -161,7 +158,7 @@ def recv_update(neigh_fi,addr, update):
           logger.debug("\t\t\tsame net, dropping")
           there = True
           ## FIXME should make it as int through get function
-          if int(x.met) < int(y.met):
+          if x.get_count() < y.get_count():
             up_list.append(x)
           break
       if not there:
@@ -190,6 +187,13 @@ def recv_update(neigh_fi,addr, update):
     k.set_ttl(current_time)
     update_neighbors.append(k.transmit_route())
   
+  for k in neighbors:
+    if k not in update_neighbors:
+      r = anhost.Route()
+      r.set_route(k)
+      update_neighbors.append(r.transmit_route())
+
+  """
   ## add original entries not seen in this update
   ## by not adding above, we remove all update entries
   for k in neighbors:
@@ -203,12 +207,12 @@ def recv_update(neigh_fi,addr, update):
         update_neighbors.append(r.transmit_route())
     ## delete the current linux route table information
     ## FIXME: else:
+  """
 
   logger.debug("\t\tNew route table: %s" % update_neighbors)
   return update_neighbors
 
 def recv_handler(rip_sock,n_fi):
-  global rip_neighbors
   logger.debug("\tRECV_HANDLER")
   #try:
   while True:
@@ -216,9 +220,6 @@ def recv_handler(rip_sock,n_fi):
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\t\tmessage: %s" % msg)
     logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    ## FIXME need to tie rip_neighbors with a ttl and the route table
-    if addr[0] not in rip_neighbors:
-      rip_neighbors.append(addr[0])
     update = recv_update(n_fi,addr[0], json.loads(msg))
     write_n_fi(n_fi,update)
     logger.debug("\t\tupdate written out to file.")
@@ -257,7 +258,7 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   rip_sock.setblocking(1) # blocking recv
 
   ## start rip on neighbors
-  send_broadcast(local_ip, code,serv_port)
+  anhost.send_broadcast(local_ip, code,serv_port)
 
   try:
     ## recver thread

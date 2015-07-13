@@ -45,6 +45,8 @@ class Route:
     as_int = int(self.met)
     as_int += 1
     self.met = str(as_int)
+  def get_count(self):
+    return int(self.met)
   def get_route(self):
     rdict = {}
     rdict['Destination'] = self.dst
@@ -120,16 +122,6 @@ def get_int_ip():
   ip_num = ip[::-1]
   ip = [str(int(str(l),16)) for l in ip_num]
   return '.'.join(ip)
-
-def send_to_local_interfaces(msg,dev_iface,port):
-  logger.debug("\t\tSEND_TO_ALL_INTERFACES")
-  iface_list = anhost.non_default_routes()
-  #logger.debug("Non-default Routes: %s" % iface_list)
-  for iface in iface_list:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    iface_ip = anhost.get_ip_address(dev_iface)
-    logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,port))
-    sock.sendto(msg, (iface_ip,port))
 
 #get access to the arp table, return the contents
 def get_arp_table():
@@ -382,3 +374,32 @@ def use_default_route():
         if val == "Destination" and eth[eth_d][val] == "0.0.0.0":
           return eth[eth_d]["Gateway"]
   return -1
+
+
+def send_to_local_interfaces(msg,dev_iface,port):
+  logger.debug("\t\tSEND_TO_ALL_INTERFACES")
+  iface_list = non_default_routes()
+  #logger.debug("Non-default Routes: %s" % iface_list)
+  for iface in iface_list:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    iface_ip = get_ip_address(dev_iface)
+    logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,dev_iface))
+    sock.sendto(msg, (iface_ip,port))
+
+## short simple code to just broadcast unicast message
+def send_broadcast(local_ip,msg,port):
+  logger.debug("\tSEND_BROADCAST")
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  prefix = '.'.join(local_ip.split(".")[0:3])+'.'
+  suff = local_ip.split(".")[-1]
+  logger.debug("\t\tbroadcasting to: %s*" % prefix)
+  logger.debug("\t\tnot sending to: %s" % prefix+suff)
+  for i in range(1,254):
+    if i != int(suff):
+      sock.sendto(msg, (prefix+str(i),port))
+    else:
+      logger.debug(i)
+  logger.debug("\t\tbroadcast done.")
+
+
+
