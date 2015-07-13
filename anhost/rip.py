@@ -130,7 +130,7 @@ def send_handler(sock,n_fi,port,dev,mgmt):
     send_update(sock, n_fi,port,dev,mgmt)
     time.sleep(10)
 
-def recv_update(neigh_fi,addr,mgmt, update):
+def recv_update(neigh_fi,addr, dev,mgmt, update):
   add_list = []
   up_list = []
   neighbors = read_n_fi(neigh_fi)
@@ -146,6 +146,8 @@ def recv_update(neigh_fi,addr,mgmt, update):
     x = anhost.Route()
     x.set_route(route)
     x.update_metric()
+    ## change the interface value to the one it was recieved by
+    x.set_iface(dev)
     # RIP prevent CTI
     if int(x.met) < 16:
       bm = bit_mask(x.mask)
@@ -196,7 +198,7 @@ def recv_update(neigh_fi,addr,mgmt, update):
   logger.info("FINAL route table: %s" % update_neighbors)
   return update_neighbors
 
-def recv_handler(rip_sock,mgmt,n_fi):
+def recv_handler(rip_sock,dev,mgmt,n_fi):
   logger.debug("\tRECV_HANDLER")
   #try:
   while True:
@@ -204,7 +206,7 @@ def recv_handler(rip_sock,mgmt,n_fi):
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\t\tmessage: %s" % msg)
     logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    update = recv_update(n_fi,addr[0], mgmt,json.loads(msg))
+    update = recv_update(n_fi,addr[0], dev,mgmt,json.loads(msg))
     write_n_fi(n_fi,update)
     logger.debug("\t\tupdate written out to file.")
     time.sleep(15)
@@ -245,7 +247,8 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev, mgmt):
 
   try:
     ## recver thread
-    recv_thread = threading.Thread(target=recv_handler, args=(rip_sock,mgmt,neigh,))
+    recv_thread = threading.Thread(target=recv_handler,\
+                        args=(rip_sock,dev,mgmt,neigh,))
     recv_thread.start()
   except Exception,e:
     logger.error("Receving Thread Error")

@@ -35,18 +35,24 @@ class Route:
     update = ""
   def set_ttl(self,dt):
     self.update = dt.strftime("%Y%j%H%M%S%f")
-  def get_ttl(self):
-    return datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
   def set_gw(self, gw):
     self.gw = gw
+  def set_iface(self,iface):
+    self.iface = iface
+
   def get_gw(self):
     return self.gw
+  def get_iface(self):
+    return self.iface
+  def get_count(self):
+    return int(self.met)
+  def get_ttl(self):
+    return datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
+
   def update_metric(self):
     as_int = int(self.met)
     as_int += 1
     self.met = str(as_int)
-  def get_count(self):
-    return int(self.met)
   def get_route(self):
     rdict = {}
     rdict['Destination'] = self.dst
