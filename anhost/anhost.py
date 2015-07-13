@@ -189,6 +189,8 @@ def non_default_routes():
     count += 1
   return routes
 
+
+
 #Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 def set_route_table(rdict,flag="add"):
   a =b =c =d =e = ""
@@ -220,6 +222,36 @@ def set_route_table(rdict,flag="add"):
     logger.error("Unable to make changes to Kernel Routing Table")
     logger.error(str(e))
     return -1
+
+def modify_linux_tables(mem_t,mgmt):
+  logger.debug("MODIFY_LINUX_TABLES")
+  linux = non_default_routes()
+  for r1 in linux:
+    same = False
+    for r2 in mem_t:
+      if same_route(r1,r2):
+        same = True
+    if not same and r1["Iface"] != mgmt:
+      logger.debug("Deleting Linux Route: %s" % r1)
+      try:
+        e = set_route_table(r1,flag="del")
+        logger.info("set route returned with exit status: %s" % str(e))
+      except Exception,e:
+        logger.error("Error deleting route.")
+
+  for r2 in mem_t:
+    same = False
+    for r1 in linux:
+      if same_route(r1,r2):
+        same = True
+    if not same and r2["Iface"] != mgmt:
+      logger.debug("Adding Linux Route: %s" % r2)
+      try:
+        e = set_route_table(r2,flag="add")
+        logger.info("set route returned with exit status: %s" % str(e))
+      except Exception,e:
+        logger.error("Error deleting route.")
+  
 
 #get the device information for all interfaces
 def get_dev_info():
@@ -383,14 +415,13 @@ def use_default_route():
   return -1
 
 
-def send_to_local_interfaces(msg,dev_iface,port):
+def send_to_local_interfaces(msg,dev_iface,mgmt,port):
   logger.debug("\t\tSEND_TO_ALL_INTERFACES")
   iface_list = non_default_routes()
   #logger.debug("Non-default Routes: %s" % iface_list)
   for iface in iface_list:
     ## dont send back to us.
-    ##FIXME eth0 - management
-    if iface["Iface"] != dev_iface and iface["Iface"] != "eth0":
+    if iface["Iface"] != dev_iface and iface["Iface"] != mgmt:
       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       iface_ip = get_ip_address(dev_iface)
       logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,iface["Iface"]))

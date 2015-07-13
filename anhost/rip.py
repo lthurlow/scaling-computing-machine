@@ -69,7 +69,7 @@ def update_ttls(neighbors):
   return n_neigh
     
   
-def check_timeout(fi,neighbors):
+def check_timeout(fi,neighbors,mgmt):
   logger.debug("\t\tCHECK_TIMEOUT")
   current_time = datetime.datetime.now()
   new_neigh = []
@@ -89,9 +89,10 @@ def check_timeout(fi,neighbors):
 
   logger.debug("\t\t\tRoute table after Check: %s" % new_neigh)
   write_n_fi(fi,new_neigh)
+  anhost.modify_linux_tables(new_neigh,mgmt)
   return new_neigh
 
-def send_update(sock,n_fi,rip_port,dev):
+def send_update(sock,n_fi,rip_port,dev,mgmt):
   logger.debug("\tSEND_UPDATE")
   ## list of dicts
   n_dict = read_n_fi(n_fi)
@@ -106,7 +107,7 @@ def send_update(sock,n_fi,rip_port,dev):
     #x.set_gw(anhost.get_ip_address(dev))
     rip_update.append(x.transmit_route())
 
-  rip_update = check_timeout(n_fi,rip_update)
+  rip_update = check_timeout(n_fi,rip_update,mgmt)
   rip_checked = []
   for k in rip_update:
     x = anhost.Route()
@@ -119,18 +120,17 @@ def send_update(sock,n_fi,rip_port,dev):
   logger.debug("\t\tMSG: %s" % data_str)
 
   anhost.send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
-  anhost.send_to_local_interfaces(data_str,dev,rip_port)
+  anhost.send_to_local_interfaces(data_str,dev,mgmt,rip_port)
   
 
 
-def send_handler(sock,n_fi,port,dev):
+def send_handler(sock,n_fi,port,dev,mgmt):
   while True:
     logger.debug("SEND_HANDLER")
-    send_update(sock, n_fi,port,dev)
+    send_update(sock, n_fi,port,dev,mgmt)
     time.sleep(10)
 
-#FIXME: add routes to linux routing table
-def recv_update(neigh_fi,addr, update):
+def recv_update(neigh_fi,addr,mgmt, update):
   add_list = []
   up_list = []
   neighbors = read_n_fi(neigh_fi)
@@ -139,7 +139,7 @@ def recv_update(neigh_fi,addr, update):
   logger.debug("\t\t\tmsg: %s" % update)
   
   #neighbors = update_ttls(neighbors)
-  neighbors = check_timeout(neigh_fi,neighbors)
+  neighbors = check_timeout(neigh_fi,neighbors,mgmt)
   current_time = datetime.datetime.now()
 
   for route in update:
@@ -184,7 +184,6 @@ def recv_update(neigh_fi,addr, update):
     ##FIXME: add to linux route table
 
   ## accidently deleted, need this for when the route is updated for that round
-  ## also has already been checked by check_timeout
   for k in neighbors:
     there = False
     for p in update_neighbors:
@@ -197,7 +196,7 @@ def recv_update(neigh_fi,addr, update):
   logger.info("FINAL route table: %s" % update_neighbors)
   return update_neighbors
 
-def recv_handler(rip_sock,n_fi):
+def recv_handler(rip_sock,mgmt,n_fi):
   logger.debug("\tRECV_HANDLER")
   #try:
   while True:
@@ -205,7 +204,7 @@ def recv_handler(rip_sock,n_fi):
     msg, addr = rip_sock.recvfrom(4096)
     logger.debug("\t\tmessage: %s" % msg)
     logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    update = recv_update(n_fi,addr[0], json.loads(msg))
+    update = recv_update(n_fi,addr[0], mgmt,json.loads(msg))
     write_n_fi(n_fi,update)
     logger.debug("\t\tupdate written out to file.")
     time.sleep(15)
@@ -213,7 +212,7 @@ def recv_handler(rip_sock,n_fi):
   #except Exception,e:
   #  logger.error("Recver Error: %s" % str(e))
 
-def rip_server(code, serv_port, rip_port,serv_fi, dev):
+def rip_server(code, serv_port, rip_port,serv_fi, dev, mgmt):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
@@ -225,8 +224,7 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   routes = anhost.non_default_routes()
   l_route = []
   for route in routes:
-    ## FIXME for kvm - eth0 is management
-    if route["Iface"] != "eth0":
+    if route["Iface"] != mgmt:
       ## default routes gets linux, but now we need to add arbitrary ttl for rip
       ##FIXME change get_routes to use Routes()
       x = anhost.Route()
@@ -247,7 +245,7 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
 
   try:
     ## recver thread
-    recv_thread = threading.Thread(target=recv_handler, args=(rip_sock,neigh,))
+    recv_thread = threading.Thread(target=recv_handler, args=(rip_sock,mgmt,neigh,))
     recv_thread.start()
   except Exception,e:
     logger.error("Receving Thread Error")
@@ -256,7 +254,7 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev):
   try:
     ## sender thread
     send_thread = threading.Thread(target=send_handler,\
-                  args=(rip_sock,neigh,rip_port,dev,))
+                  args=(rip_sock,neigh,rip_port,dev,mgmt,))
     send_thread.start()
   except Exception,e:
     logger.error("Sending Thread Error")

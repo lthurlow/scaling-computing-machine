@@ -54,6 +54,7 @@ def signal_term_handler(signal, frame):
 
 signal.signal(signal.SIGHUP, signal_term_handler)
 
+mgmt_iface = "eth0"
 logger.debug("Checking for File")
 ## if network server not running, start it
 iface_list = anhost.non_default_routes()
@@ -61,12 +62,11 @@ logger.debug("Non-default Routes: %s" % iface_list)
 for iface in iface_list:
   dev_iface = iface["Iface"]
   t_fi = route_fi + dev_iface
-  ## FIXME for kvm - eth0 is management
   logger.debug("device interface: %s" % dev_iface)
-  if not os.path.exists(t_fi) and dev_iface != "eth0":
+  if not os.path.exists(t_fi) and dev_iface != mgmt_iface:
     logger.debug("FILE DOES NOT EXIST: %s" % t_fi)
     rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
-                                  serv_port,net_port,t_fi,dev_iface,))
+                                  serv_port,net_port,t_fi,dev_iface,mgmt_iface,))
     ##bootstrap RIP servers on other interfaces
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     iface_ip = anhost.get_ip_address(dev_iface)
