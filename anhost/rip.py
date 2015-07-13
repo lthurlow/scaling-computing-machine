@@ -162,10 +162,10 @@ def recv_update(neigh_fi,addr, update):
           there = True
           if x.get_count() < y.get_count():
             logger.debug("\t\t\tUPDATING W/ better hop: %s" % x.get_route())
-            up_list.append(x)
+            add_list.append(x)
           else:
             logger.debug("\t\t\tUPDATING old route: %s" % y.get_route())
-            up_list.append(y)
+            add_list.append(y)
           break
       if not there:
         logger.debug("\t\t\tADDING: %s" % x.get_route())
@@ -180,12 +180,6 @@ def recv_update(neigh_fi,addr, update):
     k.set_ttl(current_time)
     update_neighbors.append(k.transmit_route())
     ##FIXME: add to linux route table
-
-  ## add new updates to replace originals in this update
-  for k in up_list:
-    k.set_ttl(current_time)
-    update_neighbors.append(k.transmit_route())
-  
 
   logger.info("FINAL route table: %s" % update_neighbors)
   return update_neighbors

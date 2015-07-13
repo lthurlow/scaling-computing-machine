@@ -381,10 +381,12 @@ def send_to_local_interfaces(msg,dev_iface,port):
   iface_list = non_default_routes()
   #logger.debug("Non-default Routes: %s" % iface_list)
   for iface in iface_list:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    iface_ip = get_ip_address(dev_iface)
-    logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,dev_iface))
-    sock.sendto(msg, (iface_ip,port))
+    ## dont send back to us.
+    if iface != dev_iface:
+      sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+      iface_ip = get_ip_address(dev_iface)
+      logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,dev_iface))
+      sock.sendto(msg, (iface_ip,port))
 
 ## short simple code to just broadcast unicast message
 def send_broadcast(local_ip,msg,port):
@@ -397,9 +399,6 @@ def send_broadcast(local_ip,msg,port):
   for i in range(1,254):
     if i != int(suff):
       sock.sendto(msg, (prefix+str(i),port))
-    else:
-      logger.debug(i)
+  ##FIXME: why is this not being printed?
   logger.debug("\t\tbroadcast done.")
-
-
 
