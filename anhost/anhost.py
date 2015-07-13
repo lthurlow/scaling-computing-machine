@@ -109,6 +109,13 @@ logger.addHandler(socketHandler)
 
 ## assuming linux
 
+def uni_decode(uni):
+  string_dict = {}
+  for k in uni:
+    string_dict[k.encode('utf-8')] = uni[k].encode('utf-8')
+  return string_dict
+
+
 def get_ip_address(ifname):
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   return socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', ifname[:15]))[20:24])
@@ -382,10 +389,11 @@ def send_to_local_interfaces(msg,dev_iface,port):
   #logger.debug("Non-default Routes: %s" % iface_list)
   for iface in iface_list:
     ## dont send back to us.
-    if iface != dev_iface:
+    ##FIXME eth0 - management
+    if iface["Iface"] != dev_iface and iface["Iface"] != "eth0":
       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       iface_ip = get_ip_address(dev_iface)
-      logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,dev_iface))
+      logger.debug("\t\t\tSending update to (%s,%s)" % (iface_ip,iface["Iface"]))
       sock.sendto(msg, (iface_ip,port))
 
 ## short simple code to just broadcast unicast message

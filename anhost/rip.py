@@ -171,6 +171,8 @@ def recv_update(neigh_fi,addr, update):
         logger.debug("\t\t\tADDING: %s" % x.get_route())
         add_list.append(x)
 
+  logger.debug("getting added:")
+  logger.debug("getting updated")
 
   ### need to update and return our modified dict
   # create new neighbor list
@@ -180,6 +182,17 @@ def recv_update(neigh_fi,addr, update):
     k.set_ttl(current_time)
     update_neighbors.append(k.transmit_route())
     ##FIXME: add to linux route table
+
+  ## accidently deleted, need this for when the route is updated for that round
+  ## also has already been checked by check_timeout
+  for k in neighbors:
+    there = False
+    for p in update_neighbors:
+      if anhost.same_route(k,anhost.uni_decode(p)):
+        logger.info("same:\n%s\n%s" % (k,anhost.uni_decode(p))) 
+        there = True
+    if not there:
+      update_neighbors.append(k)
 
   logger.info("FINAL route table: %s" % update_neighbors)
   return update_neighbors
