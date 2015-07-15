@@ -126,7 +126,7 @@ def send_update(sock,n_fi,rip_port,dev,mgmt):
   logger.debug("\t\tMSG: %s" % data_str)
 
   anhost.send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
-  anhost.send_to_local_interfaces(data_str,dev,mgmt,rip_port)
+  #anhost.send_to_local_interfaces(data_str,dev,mgmt,rip_port)
   
 
 
