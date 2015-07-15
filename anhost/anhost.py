@@ -358,7 +358,7 @@ def chg_val(disk_file, var_type, var_name, var_val, write_type):
     f.close()
     index_value = 0
     for item in file_contents:
-      x = re.findall(r'.*%s.*=.*' % var_name ,item) #so many assumptions
+      x = re.findall(r'^\b%s\s*=\s*.*' % var_name ,item) #so many assumptions
       if x:
         logger.debug(x)
         index_value = file_contents.index(item)

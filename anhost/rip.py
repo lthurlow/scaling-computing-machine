@@ -223,7 +223,7 @@ def recv_handler(rip_sock,dev,mgmt,n_fi):
   #except Exception,e:
   #  logger.error("Recver Error: %s" % str(e))
 
-def rip_server(code, serv_port, rip_port,serv_fi, dev, mgmt):
+def rip_server(code, serv_port, rip_port, dev, mgmt):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
@@ -300,11 +300,9 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev, mgmt):
     send_thread.join()
   except KeyboardInterrupt:
     logging.info("\tServer killed by Ctrl-C")
-    os.remove(serv_fi)
     os.remove(neigh)
     raise KeyboardInterrupt
   except Exception, e:
     logging.error("\tRIP Server Crash: %s" % e)
-    os.remove(serv_fi)
     os.remove(neigh)
     raise Exception(e)

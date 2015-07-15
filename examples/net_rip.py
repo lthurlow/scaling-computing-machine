@@ -26,7 +26,6 @@ import threading
 import logging
 import logging.handlers
 import datetime
-import signal
 import sys
 sys.path.append("..")
 from anhost import anhost
@@ -46,54 +45,34 @@ net_port = 50001 # rip port to use
 fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
 
-def signal_term_handler(signal, frame):
-  print "recvd ---- SIGHUP"
-  logger.error("deleting server file: %s" % route_fi)
-  if os.path.exists(route_fi):
-    os.remove(route_fi)
+mgmt_dev = "eth0"
+iface = "eth1"
+visit = []
+temp = route_fi + iface
 
-signal.signal(signal.SIGHUP, signal_term_handler)
+logger.debug("Checking for RIP file: %s" % temp)
 
-mgmt_iface = "eth0"
-logger.debug("Checking for File")
-## if network server not running, start it
+## start service on this host
+if not os.path.exists(temp) and iface != mgmt_dev:
+  logger.info("Starting RIP server on [%s]" % (iface))
+  rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
+                                serv_port,net_port,iface,mgmt_dev,))
+  t2 = open(temp,'w')
+  t2.close()
+else:
+  logger.debug("ROUTE FILE EXISTS- EXIT")
+
 iface_list = anhost.non_default_routes()
-logger.debug("Non-default Routes: %s" % iface_list)
-for iface in iface_list:
-  dev_iface = iface["Iface"]
-  t_fi = route_fi + dev_iface
-  logger.debug("device interface: %s" % dev_iface)
-  if not os.path.exists(t_fi) and dev_iface != mgmt_iface:
-    #logger.debug("FILE DOES NOT EXIST: %s" % t_fi)
-    logger.info("Starting RIP server on [%s]" % (dev_iface))
-    rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
-                                  serv_port,net_port,t_fi,dev_iface,mgmt_iface,))
-    ##bootstrap RIP servers on other interfaces
+for ifaces in iface_list:
+  dev_iface = ifaces["Iface"]
+  ##change the value for the next host
+  anhost.chg_val(fi,"","iface",dev_iface,"w")
+  if dev_iface not in visit and dev_iface != mgmt_dev:
+    anhost.chg_val(fi,[],"visit",dev_iface,"a")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     iface_ip = anhost.get_ip_address(dev_iface)
     sock.sendto(open(fi).read(), (iface_ip,serv_port))
     
-    try:
-      fi_o = open(t_fi,'w')
-      fi_o.close()
-      logger.debug("%s Thread: RIP Server" % fi)
-      logger.debug("PID: %s" % os.getpid())
-      #rip_thread.daemon = True
-      rip_thread.start()
-      rip_thread.join()
-      logger.debug("RIP Server started")
-    except KeyboardInterrupt:
-      logger.error("Key recieved! Killing threads")
-      rip_thread.kill()
-      exit(10)
-    except Exception,e:
-      logger.error("error in %s: %s" % (fi,str(e)))
-      logger.error("deleting server file: %s" % t_fi)
-      if os.path.exists(t_fi):
-        os.remove(t_fi)
-        raise Exception(e)
-  else:
-    logger.debug("ROUTE FILE EXISTS- EXIT")
 
 exit(0)
 """
