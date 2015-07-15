@@ -21,12 +21,14 @@ def traceroute(args):
   # AN port
   src = anhost.get_ip_address('eth1')
   port = 50000
+  """
   inf, po = inputs.user()
   if inf:
     src = anhost.get_ip_address(inf)
   if po:
     port = po
   print("Connecting to: %s on port: %s" % (dst,port))
+  """
   
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   AN_code = \

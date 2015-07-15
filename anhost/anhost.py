@@ -23,6 +23,8 @@ class Route:
   use = 0
   iface = ""
   update = 0
+  owner = ""
+  in_use = ""
   def __init__(self):
     self.dst = ""
     self.gw = ""
@@ -32,14 +34,25 @@ class Route:
     self.ref = 0
     self.use = 0
     self.iface = ""
-    update = ""
+    self.update = ""
+    self.owner = ""
+    self.in_use = ""
   def set_ttl(self,dt):
     self.update = dt.strftime("%Y%j%H%M%S%f")
   def set_gw(self, gw):
     self.gw = gw
   def set_iface(self,iface):
     self.iface = iface
+  #def set_owner(self,dev):
+  #  self.owner = dev
+  #  self.in_use = True
+  #def set_used(self,is_used):
+  #  self.is_used = is_used
 
+  #def get_owner(self):
+  #  return self.owner
+  #def get_used(self):
+  #  return self.in_use
   def get_gw(self):
     return self.gw
   def get_iface(self):
@@ -64,6 +77,8 @@ class Route:
     rdict['Use'] = self.use
     rdict['Iface'] = self.iface
     rdict['TTL'] = datetime.datetime.strptime(self.update,"%Y%j%H%M%S%f")
+    #rdict['Owner'] = self.owner
+    #rdict['InUse'] = self.is_used
     return  rdict
   def transmit_route(self):
     rdict = {}
@@ -76,6 +91,8 @@ class Route:
     rdict['Use'] = self.use
     rdict['Iface'] = self.iface
     rdict['TTL'] = self.update
+    #rdict['Owner'] = self.owner
+    #rdict['InUse'] = self.is_used
     return  rdict
   def set_route(self,rdict):
     self.dst = rdict['Destination'] 
@@ -86,6 +103,8 @@ class Route:
     self.ref = rdict['Ref']
     self.use = rdict['Use']
     self.iface = rdict['Iface']
+    #self.owner = rdict['Owner']
+    #self.is_used = rdict['InUse']
     try:
       if (type(rdict['TTL']) == str):
         self.update = rdict['TTL']
@@ -99,7 +118,9 @@ def same_route(r1,r2):
   if r1['Destination'] == r2['Destination'] and \
      r1['Gateway'] == r2['Gateway'] and \
      r1['Genmask'] == r2['Genmask'] and \
-     r1['Metric'] == r2['Metric']:
+     r1['Metric'] == r2['Metric'] and \
+     r1['Iface'] == r2['Iface']:
+     #r1['Owner'] == r2['Owner']:
     return True
   else:
     return False

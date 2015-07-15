@@ -69,7 +69,7 @@ def update_ttls(neighbors):
   return n_neigh
     
   
-def check_timeout(fi,neighbors,mgmt):
+def check_timeout(fi,neighbors,mgmt,dev):
   logger.debug("\t\tCHECK_TIMEOUT")
   current_time = datetime.datetime.now()
   new_neigh = []
@@ -78,12 +78,18 @@ def check_timeout(fi,neighbors,mgmt):
     r = anhost.Route()
     r.set_route(k)
     ## this will make our default routes in the lists not be dropped.
-    if r.get_gw() != "0.0.0.0":
-      if (current_time-r.get_ttl() > datetime.timedelta(minutes=2)):
-        logger.info("Route timeout: %s" % k)
-        logger.info("\t\t\tCurrent time %s, last update %s"%(current_time,r.get_ttl()))
+    ## if we are the owner of this route, we should update it.
+    if (r.get_iface() == dev):
+      if r.get_gw() != "0.0.0.0":
+        if (current_time-r.get_ttl() > datetime.timedelta(minutes=2)):
+          logger.info("Route timeout: %s" % k)
+          logger.info("\t\t\tCurrent time %s, last update %s"%(current_time,r.get_ttl()))
+        else:
+          new_neigh.append(r.transmit_route())
       else:
         new_neigh.append(r.transmit_route())
+    ## the device is not owned by us, and has not been set to free
+    ## therefore the owner of the device should only be allow to remove it.
     else:
       new_neigh.append(r.transmit_route())
 
@@ -107,7 +113,7 @@ def send_update(sock,n_fi,rip_port,dev,mgmt):
     #x.set_gw(anhost.get_ip_address(dev))
     rip_update.append(x.transmit_route())
 
-  rip_update = check_timeout(n_fi,rip_update,mgmt)
+  rip_update = check_timeout(n_fi,rip_update,mgmt,dev)
   rip_checked = []
   for k in rip_update:
     x = anhost.Route()
@@ -139,7 +145,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   logger.debug("\t\t\tmsg: %s" % update)
   
   #neighbors = update_ttls(neighbors)
-  neighbors = check_timeout(neigh_fi,neighbors,mgmt)
+  neighbors = check_timeout(neigh_fi,neighbors,mgmt,dev)
   current_time = datetime.datetime.now()
 
   for route in update:
@@ -167,7 +173,10 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
             add_list.append(x)
           else:
             logger.debug("\t\t\tUPDATING old route: %s" % y.get_route())
-            add_list.append(y)
+            if y.get_iface() == dev:
+              add_list.append(y)
+            else:
+              logger.debug("\t\t\t\theard from different interface, ignoring")
           break
       if not there:
         logger.debug("\t\t\tADDING: %s" % x.get_route())
@@ -220,19 +229,42 @@ def rip_server(code, serv_port, rip_port,serv_fi, dev, mgmt):
   logger.debug("PID: %s" % os.getpid())
   logger.debug("DEVICES: %s" % dev)
   local_ip = anhost.get_ip_address(dev)
-  # dst : via, cost
-  x = open(neigh,'w')
-  x.close()
-  routes = anhost.non_default_routes()
+
   l_route = []
-  for route in routes:
-    if route["Iface"] != mgmt:
-      ## default routes gets linux, but now we need to add arbitrary ttl for rip
-      ##FIXME change get_routes to use Routes()
-      x = anhost.Route()
-      x.set_route(route)
-      x.set_ttl(datetime.datetime.now())
-      l_route.append(x.transmit_route())
+  routes = anhost.non_default_routes()
+
+  ##this write needs to have guards to make sure it doesnt wipe out another
+  ##interfaces update
+  ##FIXME: Clean this code up later
+  if not os.path.exists(neigh):
+    x = open(neigh,'w')
+    x.close()
+    for route in routes:
+      if route["Iface"] != mgmt:
+        ## default routes gets linux, but now we need to add arbitrary ttl for rip
+        ##FIXME change get_routes to use Routes()
+        x = anhost.Route()
+        x.set_route(route)
+        x.set_ttl(datetime.datetime.now())
+        l_route.append(x.transmit_route())
+  else:
+    prev_routes = read_n_fi(neigh)
+    for proute in prev_routes:
+      y = anhost.Route()
+      y.set_route(proute)
+      y.set_ttl(datetime.datetime.now())
+      there = False
+      for route in routes:
+        x = anhost.Route()
+        x.set_route(route)
+        x.set_ttl(datetime.datetime.now())
+        if anhost.same_route(x,y):
+          there = True
+      if not there:
+        l_route.append(y)
+      else:
+        l_route.append(x)
+        
   write_n_fi(neigh,l_route)
 
   logger.debug("\tinitial neighbor list: %s" % read_n_fi(neigh))

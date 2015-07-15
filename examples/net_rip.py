@@ -64,7 +64,8 @@ for iface in iface_list:
   t_fi = route_fi + dev_iface
   logger.debug("device interface: %s" % dev_iface)
   if not os.path.exists(t_fi) and dev_iface != mgmt_iface:
-    logger.debug("FILE DOES NOT EXIST: %s" % t_fi)
+    #logger.debug("FILE DOES NOT EXIST: %s" % t_fi)
+    logger.info("Starting RIP server on [%s]" % (dev_iface))
     rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
                                   serv_port,net_port,t_fi,dev_iface,mgmt_iface,))
     ##bootstrap RIP servers on other interfaces
