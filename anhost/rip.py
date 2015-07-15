@@ -258,12 +258,12 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
         x = anhost.Route()
         x.set_route(route)
         x.set_ttl(datetime.datetime.now())
-        if anhost.same_route(x,y):
+        if anhost.same_route(proute,route):
           there = True
       if not there:
-        l_route.append(y)
+        l_route.append(y.transmit_route())
       else:
-        l_route.append(x)
+        l_route.append(x.transmit_route())
         
   write_n_fi(neigh,l_route)
 

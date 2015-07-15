@@ -47,10 +47,20 @@ route_fi = ".route_rip" #server file flag
 
 mgmt_dev = "eth0"
 iface = "eth1"
-visit = []
+visit = ["eth1"]
 temp = route_fi + iface
 
 logger.debug("Checking for RIP file: %s" % temp)
+
+iface_list = anhost.non_default_routes()
+for ifaces in iface_list:
+  dev_iface = ifaces["Iface"]
+  if dev_iface not in visit and dev_iface != mgmt_dev:
+    anhost.chg_val(fi,"","iface",dev_iface,"w")
+    anhost.chg_val(fi,[],"visit",dev_iface,"a")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    iface_ip = anhost.get_ip_address(dev_iface)
+    sock.sendto(open(fi).read(), (iface_ip,serv_port))
 
 ## start service on this host
 if not os.path.exists(temp) and iface != mgmt_dev:
@@ -68,16 +78,6 @@ if not os.path.exists(temp) and iface != mgmt_dev:
 else:
   logger.debug("ROUTE FILE EXISTS- EXIT")
 
-iface_list = anhost.non_default_routes()
-for ifaces in iface_list:
-  dev_iface = ifaces["Iface"]
-  if dev_iface not in visit and dev_iface != mgmt_dev:
-    anhost.chg_val(fi,"","iface",dev_iface,"w")
-    anhost.chg_val(fi,[],"visit",dev_iface,"a")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    iface_ip = anhost.get_ip_address(dev_iface)
-    sock.sendto(open(fi).read(), (iface_ip,serv_port))
-    
 
 exit(0)
 """
