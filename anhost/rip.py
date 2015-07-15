@@ -236,6 +236,7 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
   ##this write needs to have guards to make sure it doesnt wipe out another
   ##interfaces update
   ##FIXME: Clean this code up later
+  logger.debug("RIP server running: %s" % os.path.exists(neigh))
   if not os.path.exists(neigh):
     x = open(neigh,'w')
     x.close()
@@ -253,19 +254,8 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
       y = anhost.Route()
       y.set_route(proute)
       y.set_ttl(datetime.datetime.now())
-      there = False
-      for route in routes:
-        x = anhost.Route()
-        x.convert_route(route)
-        x.set_ttl(datetime.datetime.now())
-        if anhost.same_route(proute,route):
-          there = True
-      if not there:
-        logger.debug("Adding new Route: %s" % y.transmit_route())
-        l_route.append(y.transmit_route())
-      else:
-        logger.debug("Adding original Route: %s" % x.transmit_route())
-        l_route.append(x.transmit_route())
+      logger.debug("Adding Memory Route: %s" % y.transmit_route())
+      l_route.append(y.transmit_route())
         
   write_n_fi(neigh,l_route)
 
