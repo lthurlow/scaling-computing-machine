@@ -277,6 +277,8 @@ def set_route_table(rdict,flag="add"):
       cmd = "route del -net %s netmask %s metric %s gw %s dev %s" % (a,c,d,b,e)
     cmd = cmd.split()
     x = subprocess.call(cmd)
+    if x != 0:
+      logger.error("cmd failed: %s" % cmd)
     return x
   except Exception,e:
     logger.error("Unable to make changes to Kernel Routing Table")
