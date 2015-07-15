@@ -52,9 +52,11 @@ temp = route_fi + iface
 
 logger.debug("Checking for RIP file: %s" % temp)
 
-iface_list = anhost.non_default_routes()
+iface_list = anhost.sim_routes(mgmt_dev)
+this_iface_l = []
 for ifaces in iface_list:
   dev_iface = ifaces["Iface"]
+  this_iface_l.append(dev_iface)
   if dev_iface not in visit and dev_iface != mgmt_dev:
     anhost.chg_val(fi,"","iface",dev_iface,"w")
     anhost.chg_val(fi,[],"visit",dev_iface,"a")
@@ -63,7 +65,7 @@ for ifaces in iface_list:
     sock.sendto(open(fi).read(), (iface_ip,serv_port))
 
 ## start service on this host
-if not os.path.exists(temp) and iface != mgmt_dev:
+if not os.path.exists(temp) and iface != mgmt_dev and iface in this_iface_l:
   logger.info("Starting RIP server on [%s]" % (iface))
   rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
                                 serv_port,net_port,iface,mgmt_dev,))

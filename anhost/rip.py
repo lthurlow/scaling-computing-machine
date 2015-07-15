@@ -231,7 +231,7 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
   local_ip = anhost.get_ip_address(dev)
 
   l_route = []
-  routes = anhost.non_default_routes()
+  routes = anhost.sim_routes(mgmt)
 
   ##this write needs to have guards to make sure it doesnt wipe out another
   ##interfaces update
@@ -244,7 +244,7 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
         ## default routes gets linux, but now we need to add arbitrary ttl for rip
         ##FIXME change get_routes to use Routes()
         x = anhost.Route()
-        x.set_route(route)
+        x.convert_route(route)
         x.set_ttl(datetime.datetime.now())
         l_route.append(x.transmit_route())
   else:
@@ -256,13 +256,15 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
       there = False
       for route in routes:
         x = anhost.Route()
-        x.set_route(route)
+        x.convert_route(route)
         x.set_ttl(datetime.datetime.now())
         if anhost.same_route(proute,route):
           there = True
       if not there:
+        logger.debug("Adding new Route: %s" % y.transmit_route())
         l_route.append(y.transmit_route())
       else:
+        logger.debug("Adding original Route: %s" % x.transmit_route())
         l_route.append(x.transmit_route())
         
   write_n_fi(neigh,l_route)

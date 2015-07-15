@@ -105,24 +105,40 @@ class Route:
     self.iface = rdict['Iface']
     #self.owner = rdict['Owner']
     #self.is_used = rdict['InUse']
-    try:
-      if (type(rdict['TTL']) == str):
-        self.update = rdict['TTL']
-      else:
-        temp = datetime.datetime.strptime(rdict['TTL'],"%Y%j%H%M%S%f")
-        self.update = datetime.datetime.strftime(temp,"%Y%j%H%M%S%f")
-    except KeyError:
-      logger.error("KeyError with adding TTL")
+    #try:
+    logger.debug("TTL: type %s value %s" % (type(rdict["TTL"]),rdict["TTL"]))
+    if (type(rdict['TTL']) == str):
+      self.update = rdict['TTL']
+    else:
+      temp = datetime.datetime.strptime(rdict['TTL'],"%Y%j%H%M%S%f")
+      self.update = datetime.datetime.strftime(temp,"%Y%j%H%M%S%f")
+    #except KeyError:
+    #  logger.error("KeyError with adding TTL")
+  def convert_route(self,rdict):
+    self.dst = rdict['Destination'] 
+    self.gw = rdict['Gateway'] 
+    self.mask = rdict['Genmask'] 
+    self.flag = rdict['Flags']
+    self.met = rdict['Metric']
+    self.ref = rdict['Ref']
+    self.use = rdict['Use']
+    self.iface = rdict['Iface']
+    self.update = 0
+
 
 def same_route(r1,r2):
+  logger.debug("\tSAME_ROUTE")
+  logger.debug("testing:\n%s\n%s" % (r1,r2))
   if r1['Destination'] == r2['Destination'] and \
      r1['Gateway'] == r2['Gateway'] and \
      r1['Genmask'] == r2['Genmask'] and \
      r1['Metric'] == r2['Metric'] and \
      r1['Iface'] == r2['Iface']:
      #r1['Owner'] == r2['Owner']:
+    logger.debug("Same Route")
     return True
   else:
+    logger.debug("Different Route")
     return False
     
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
@@ -216,6 +232,23 @@ def non_default_routes():
     count += 1
   return routes
 
+def sim_routes(mgmt):
+  output = subprocess.check_output(['route', '-nv'])
+  count = 0
+  keys = []
+  routes = []
+  for line in output.split('\n')[1:-1]:
+    if count == 0:
+      keys = line.split()
+    else:
+      route = {}
+      for i in xrange(0,len(keys)):
+        route[keys[i]] = line.split()[i]
+      if route["Iface"] != mgmt:
+        routes.append(route)
+    count += 1
+  return routes
+
 
 
 #Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
@@ -252,7 +285,7 @@ def set_route_table(rdict,flag="add"):
 
 def modify_linux_tables(mem_t,mgmt):
   logger.debug("MODIFY_LINUX_TABLES")
-  linux = non_default_routes()
+  linux = sim_routes(mgmt)
   for r1 in linux:
     same = False
     for r2 in mem_t:
