@@ -1,9 +1,20 @@
 import socket # for creating a socket
 import re # for pattern matching ip address
+import logging
+import logging.handlers
+
 import sys
 sys.path.append("..")
 from anhost import anhost
 from anhost import inputs
+
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
+logging.basicConfig(format=FORMAT)
+logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
+logger.setLevel(logging.DEBUG)
+socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+logger.addHandler(socketHandler)
 
 def help_traceroute():
   print("\ttraceroute -- print the route packets take to active network hosts")
@@ -33,13 +44,22 @@ def traceroute(args):
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   AN_code = \
 """
-hop = []
-trace = []
+import socket as sk
+import datetime as dt
+import threading
+
 import sys
 sys.path.append("..")
 from anhost import anhost
-import socket as sk
-import datetime as dt
+
+FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"
+logging.basicConfig(format=FORMAT)
+logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
+logger.setLevel(logging.DEBUG)
+
+hop = []
+trace = []
+
 dn = anhost.get_time()
 dst = ""
 src = ""
@@ -55,7 +75,7 @@ if not fin:
     anhost.chg_val(fi,[],"hop",ch,'a')
     if tmr:
       print type(dn),type(tmr)
-      anhost.chg_val(fi,[],"trace",tmr-dn,'a')
+      anhost.chg_val(fi,[],"trace",dn-tmr,'a')
       anhost.chg_val(fi,0.0,"tmr",dn,'w')
     if ch == dst:
       anhost.chg_val(fi,0,"fin",1,'w')
@@ -72,6 +92,11 @@ else:
       print "%4d\t%20s\t%4s" % (iter,h,tr)
   else:
     sock.sendto(open(fi).read(), (dst,50000))
+
+
+trace = threading.Thread(target=function,args=(,))
+trace.start()
+trace.join()
 """
   # we should run it locally first to populate, send to self first, then forward.
   local_code = anhost.set_src_dst(AN_code, src,dst)
