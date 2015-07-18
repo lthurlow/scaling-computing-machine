@@ -46,36 +46,20 @@ fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
 
 mgmt_dev = "eth0"
-iface = "eth1"
-visit = ["eth1"]
-temp = route_fi + iface
 
-logger.debug("Checking for RIP file: %s" % temp)
-
-iface_list = anhost.sim_routes(mgmt_dev)
-this_iface_l = []
-for ifaces in iface_list:
-  dev_iface = ifaces["Iface"]
-  this_iface_l.append(dev_iface)
-  if dev_iface not in visit and dev_iface != mgmt_dev:
-    anhost.chg_val(fi,"","iface",dev_iface,"w")
-    anhost.chg_val(fi,[],"visit",dev_iface,"a")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    iface_ip = anhost.get_ip_address(dev_iface)
-    sock.sendto(open(fi).read(), (iface_ip,serv_port))
-
+logger.debug("Checking for RIP file: %s" % route_fi)
 ## start service on this host
-if not os.path.exists(temp) and iface != mgmt_dev and iface in this_iface_l:
-  logger.info("Starting RIP server on [%s]" % (iface))
+if not os.path.exists(route_fi):
+  logger.info("Starting RIP server" )
   rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
-                                serv_port,net_port,iface,mgmt_dev,))
+                                serv_port,net_port,mgmt_dev,))
   logger.debug("%s Thread: RIP Server" % fi)
   logger.debug("PID: %s" % os.getpid())
   rip_thread.start()
   rip_thread.join()
   logger.debug("RIP Server started")
 
-  t2 = open(temp,'w')
+  t2 = open(route_fi,'w')
   t2.close()
 else:
   logger.debug("ROUTE FILE EXISTS- EXIT")

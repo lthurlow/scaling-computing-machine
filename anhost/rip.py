@@ -263,12 +263,10 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   recv_mutex.release()
 
 #FIXME when I get there, impletement poison-reverse for Counting problem
-def rip_server(code, serv_port, rip_port, dev, mgmt):
+def rip_server(code, serv_port, rip_port, mgmt):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
-  logger.debug("DEVICES: %s" % dev)
-  #local_ip = anhost.get_ip_address(dev)
 
   l_route = []
   routes = anhost.sim_routes(mgmt)
@@ -315,19 +313,25 @@ def rip_server(code, serv_port, rip_port, dev, mgmt):
       send_thread = threading.Thread(target=send_handler,\
                      args=(rip_serv,neigh,rip_port,route["Iface"],mgmt,))
       send_thread.start()
-      send_thread.join()
+      #send_thread.join()
 
 
-
+    ## start the reciever, the reciever is going to be a queue of all the listening
+    ## interfaces, in this way, each interface will be updated fifo like.  Reduces
+    ## the overall complexity of having to deal with multiple interfaces updating
+    ## the routing table asynchronously.
     while True:
+      #select is a blocking instruction.
       inputready,outputready,exceptready = select.select(rip_interfaces,[],[]) 
       logger.debug("input que: %s" % inputready)
+      ## FIXME problem may be here
       for sock in inputready: 
+        sock_ip = socket.gethostbyname(socket.gethostname())[0]
         logger.debug("\t\taceepting messages...")
         msg, addr = sock.recvfrom(4096)
         logger.debug("\t\tmessage: %s" % msg)
         logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-        recv_update(addr[0], sock.getnameinfo()[0],mgmt,json.loads(msg))
+        recv_update(addr[0],sock_ip,mgmt,json.loads(msg))
         logger.debug("\t\tupdate written out to file.")
         logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(n_fi))
        
