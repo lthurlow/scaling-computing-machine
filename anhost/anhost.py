@@ -105,7 +105,7 @@ class Route:
     #self.owner = rdict['Owner']
     #self.is_used = rdict['InUse']
     #try:
-    logger.debug("TTL: type %s value %s" % (type(rdict["TTL"]),rdict["TTL"]))
+    #logger.debug("TTL: type %s value %s" % (type(rdict["TTL"]),rdict["TTL"]))
     if (type(rdict['TTL']) == str):
       self.update = rdict['TTL']
     else:
@@ -126,18 +126,18 @@ class Route:
 
 
 def same_route(r1,r2):
-  logger.debug("\tSAME_ROUTE")
-  logger.debug("testing:\n%s\n%s" % (r1,r2))
+  #logger.debug("\tSAME_ROUTE")
+  #logger.debug("testing:\n%s\n%s" % (r1,r2))
   if r1['Destination'] == r2['Destination'] and \
      r1['Gateway'] == r2['Gateway'] and \
      r1['Genmask'] == r2['Genmask'] and \
      r1['Metric'] == r2['Metric'] and \
      r1['Iface'] == r2['Iface']:
      #r1['Owner'] == r2['Owner']:
-    logger.debug("Same Route")
+    #logger.debug("Same Route")
     return True
   else:
-    logger.debug("Different Route")
+    #logger.debug("Different Route")
     return False
     
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"

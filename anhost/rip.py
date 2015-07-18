@@ -165,7 +165,7 @@ def send_handler(sock,n_fi,port,dev,mgmt):
   while True:
     logger.debug("SEND_HANDLER")
     send_update(sock, n_fi,port,dev,mgmt)
-    time.sleep(10)
+    time.sleep(30)
 
 ## handle the updates recieved by neighbors
 ## XXX here
@@ -233,11 +233,14 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
               logger.debug("\t\tUPDATING old route: %s" % y.get_route())
               add_list.append(y)
             else:
-              logger.debug("\t\t\t\theard from different interface, ignoring")
+              logger.debug("\t\theard from different interface, ignoring")
           break
       ## the route was not previously stored, so add it.
       if not there:
         logger.debug("\t\t\tADDING: %s" % x.get_route())
+        ## moved up here, because down below was updated routes that should not be
+        ## updated
+        x.set_ttl(current_time)
         add_list.append(x)
 
   logger.debug("getting added: %s" % x.transmit_route())
@@ -246,7 +249,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   update_neighbors = []
   # add new entries
   for k in add_list:
-    k.set_ttl(current_time)
+    #k.set_ttl(current_time)
     update_neighbors.append(k.transmit_route())
 
 
@@ -262,10 +265,12 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
     for p in update_neighbors:
       # check for differences
       if anhost.same_route(k,anhost.uni_decode(p)):
-        logger.info("same:\n%s\n%s" % (k,anhost.uni_decode(p))) 
+        #logger.info("same:\n%s\n%s" % (k,anhost.uni_decode(p))) 
+        logger.debug("\tFOUND ROUTE- Update?")
         there = True
     # if the old route was not in the new route, add it.
     if not there:
+      logger.debug("\tROUTE NOT FOUND - ADDING")
       update_neighbors.append(k)
 
   ##write out the updated routes to the route file
