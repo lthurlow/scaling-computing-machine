@@ -71,6 +71,22 @@ def read_n_fi(n_fi):
   mutex.release()
   return neighbor
 
+## get the interface name associated with an IP
+## should add more error code...
+def get_interface(ip,mgmt):
+  #logger.debug("GET_INTERFACE")
+  routes = anhost.sim_routes(mgmt)
+  for route in routes:
+    bm = bit_mask(route["Genmask"])
+    net = route["Destination"]
+    net_as_str = net+"/"+str(bm)
+    #logger.debug("\tnetwork: %s" % net_as_str)
+    #logger.debug("\t"+ip)
+    if netaddr.IPAddress(ip) in netaddr.IPNetwork(net_as_str):
+      #logger.debug("\tTrue")
+      return route["Iface"]
+  logger.error("interface not found!")
+
 ## check timeout makes sure to timeout stale routes
 ## gets called by both recieve and send in a timely fashion
 def check_timeout(fi,neighbors,mgmt,dev):
@@ -253,9 +269,9 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
       update_neighbors.append(k)
 
   ##write out the updated routes to the route file
-  write_n_fi(n_fi,update_neighbors)
+  write_n_fi(neigh_fi,update_neighbors)
   ##FIXME: add to linux route table
-  anhost.modify_linux_tables(update_neighbore,mgmt)
+  anhost.modify_linux_tables(update_neighbors,mgmt)
 
   logger.info("\tAfter Update route table: %s" % update_neighbors)
 
@@ -326,14 +342,14 @@ def rip_server(code, serv_port, rip_port, mgmt):
       logger.debug("input que: %s" % inputready)
       ## FIXME problem may be here
       for sock in inputready: 
-        sock_ip = socket.gethostbyname(socket.gethostname())[0]
+        dev = get_interface(sock.getsockname()[0],mgmt)
         logger.debug("\t\taceepting messages...")
         msg, addr = sock.recvfrom(4096)
         logger.debug("\t\tmessage: %s" % msg)
         logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-        recv_update(addr[0],sock_ip,mgmt,json.loads(msg))
+        recv_update(neigh,addr[0],dev,mgmt,json.loads(msg))
         logger.debug("\t\tupdate written out to file.")
-        logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(n_fi))
+        logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(neigh))
        
 
 

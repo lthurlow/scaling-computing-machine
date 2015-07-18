@@ -8,10 +8,7 @@ import datetime
 import time
 import os
 import pprint as pp
-import signal
-
 import subprocess
-from string import Template
 
 default_gw = "0.0.0.0"
 
