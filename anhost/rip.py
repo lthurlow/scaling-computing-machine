@@ -50,7 +50,8 @@ def write_n_fi(n_fi, n_list):
   logger.debug("WRITE_N_FI")
   x = open(n_fi,'w')
   for k in n_list:
-    logger.debug("\twriting: %s" % k)
+    logger.debug("\twriting: (%s,%s,%s,%s,%s)" % \
+      (k['Destination'],k['Genmask'],k['Gateway'],k['Iface'],k['TTL']) )
     x.write(json.dumps(k)+'\n')
   x.close()
   mutex.release()
@@ -64,7 +65,8 @@ def read_n_fi(n_fi):
   neighbor = []
   for l in x:
     p = str_to_dict(l.strip())
-    logger.debug("\tloaded: %s" % p)
+    logger.debug("\treading: (%s,%s,%s,%s,%s)" % \
+      (p['Destination'],p['Genmask'],p['Gateway'],p['Iface'],p['TTL']) )
     neighbor.append(p)
   x.close()
   logger.info("%s" % neighbor)
@@ -196,6 +198,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
     x.update_metric()
     ## on recv, change the route to have the interface received on.
     x.set_iface(dev)
+    x.set_ttl(current_time)
 
     ## force routes to be less than 16 hops away
     if int(x.met) < 16:
@@ -238,9 +241,6 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
       ## the route was not previously stored, so add it.
       if not there:
         logger.debug("\t\t\tADDING: %s" % x.get_route())
-        ## moved up here, because down below was updated routes that should not be
-        ## updated
-        x.set_ttl(current_time)
         add_list.append(x)
 
   logger.debug("getting added: %s" % x.transmit_route())
@@ -334,7 +334,7 @@ def rip_server(code, serv_port, rip_port, mgmt):
       send_thread = threading.Thread(target=send_handler,\
                      args=(rip_serv,neigh,rip_port,route["Iface"],mgmt,))
       send_thread.start()
-      #send_thread.join()
+      #send_thread.join() #cant use join(), blocking calls
 
 
     ## start the reciever, the reciever is going to be a queue of all the listening
@@ -355,92 +355,3 @@ def rip_server(code, serv_port, rip_port, mgmt):
         recv_update(neigh,addr[0],dev,mgmt,json.loads(msg))
         logger.debug("\t\tupdate written out to file.")
         logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(neigh))
-       
-
-
-  """
-  else:
-    prev_routes = read_n_fi(neigh)
-    for proute in prev_routes:
-      y = anhost.Route()
-      y.set_route(proute)
-      y.set_ttl(datetime.datetime.now())
-      logger.debug("Adding Memory Route: %s" % y.transmit_route())
-      l_route.append(y.transmit_route())
-        
-  write_n_fi(neigh,l_route)
-
-  logger.debug("\tinitial neighbor list: %s" % read_n_fi(neigh))
-
-  #set up rip server socket
-  rip_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  rip_sock.bind((local_ip,rip_port))
-  rip_sock.setblocking(1) # blocking recv
-
-  ## start rip on neighbors
-  anhost.send_broadcast(local_ip, code,serv_port)
-
-  try:
-    ## recver thread
-    recv_thread = threading.Thread(target=recv_handler,\
-                        args=(rip_sock,dev,mgmt,neigh,))
-    recv_thread.start()
-  except Exception,e:
-    logger.error("Receving Thread Error")
-    raise Exception(e)
-
-  try:
-    ## sender thread
-    send_thread = threading.Thread(target=send_handler,\
-                  args=(rip_sock,neigh,rip_port,dev,mgmt,))
-    send_thread.start()
-  except Exception,e:
-    logger.error("Sending Thread Error")
-    raise Exception(e)
-
-  try:
-    recv_thread.join()
-    send_thread.join()
-  except KeyboardInterrupt:
-    logging.info("\tServer killed by Ctrl-C")
-    os.remove(neigh)
-    raise KeyboardInterrupt
-  except Exception, e:
-    logging.error("\tRIP Server Crash: %s" % e)
-    os.remove(neigh)
-    raise Exception(e)
-  """
-
-"""
-def recv_handler(rip_sock,dev,mgmt,n_fi):
-  logger.debug("\tRECV_HANDLER")
-  #try:
-  while True:
-    logger.debug("\t\taceepting messages...")
-    msg, addr = rip_sock.recvfrom(4096)
-    logger.debug("\t\tmessage: %s" % msg)
-    logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-    update = recv_update(n_fi,addr[0], dev,mgmt,json.loads(msg))
-    write_n_fi(n_fi,update)
-    logger.debug("\t\tupdate written out to file.")
-    time.sleep(15)
-    logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(n_fi))
-  #except Exception,e:
-  #  logger.error("Recver Error: %s" % str(e))
-
-"""
-
-"""
-def update_ttls(neighbors):
-  logger.debug("UPDATE_TTLS")
-  current_time = datetime.datetime.now()
-  n_neigh = []
-  for k in neighbors:
-    p = anhost.Route()
-    p.set_route(k)
-    p.set_ttl(current_time)
-    n_neigh.append(p.transmit_route())
-    logger.debug("updated ttl: %s" % p.get_route())
-  return n_neigh
-"""
- 
