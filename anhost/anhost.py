@@ -510,7 +510,7 @@ def get_default_intefaces(mgmt):
   routes = []
   stable = sim_routes(mgmt)
   for route in stable:
-    if route["Genmask"] == default_gw:
+    if route["Gateway"] == default_gw:
       routes.append(route)
   return routes
 
