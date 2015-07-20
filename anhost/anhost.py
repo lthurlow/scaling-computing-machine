@@ -516,6 +516,7 @@ def get_default_intefaces(mgmt):
 
 def check_same_host(src,dst,mgmt):
   routes = get_default_intefaces(mgmt)
+  logger.debug("defaults: %s" % routes)
   srcThere = False
   dstThere = False
   for route in routes:
@@ -524,8 +525,10 @@ def check_same_host(src,dst,mgmt):
     net_as_str = net+"/"+str(bm)
     if netaddr.IPAddress(src) in netaddr.IPNetwork(net_as_str):
       srcThere = True
+      logger.debug("src: (%s -> %s" % (src,route))
     elif netaddr.IPAddress(dst) in netaddr.IPNetwork(net_as_str):
       dstThere = True
+      logger.debug("dst: (%s -> %s" % (dst,route))
   if srcThere and dstThere:
     return True
   else:

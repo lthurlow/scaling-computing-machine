@@ -84,6 +84,7 @@ anhost.chg_val(fi,"","lh",ch,'w')
 logger.debug("updated last host: %s" % ch)
 
 new_dst = anhost.get_forward_ip(dst)
+logger.debug("same host: %s" % anhost.check_same_host(ch,dst,mgmt))
 
 if not fin:
   if ch == src:
