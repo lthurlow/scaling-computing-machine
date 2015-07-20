@@ -37,13 +37,6 @@ def str_to_dict(str_dict):
   return string_dict
 
 ## get the / netmask value for route comparision /24 vs /25
-def bit_mask(mask):
-  x = mask.split(".")
-  bc = 0
-  for k in x:
-    bc += bin(int(k)).count("1")
-  return str(bc)
-
 ## write to the rip route file, should be protected write access
 def write_n_fi(n_fi, n_list):
   mutex.acquire()
@@ -79,7 +72,7 @@ def get_interface(ip,mgmt):
   #logger.debug("GET_INTERFACE")
   routes = anhost.sim_routes(mgmt)
   for route in routes:
-    bm = bit_mask(route["Genmask"])
+    bm = anhost.bit_mask(route["Genmask"])
     net = route["Destination"]
     net_as_str = net+"/"+str(bm)
     #logger.debug("\tnetwork: %s" % net_as_str)
@@ -202,7 +195,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
 
     ## force routes to be less than 16 hops away
     if int(x.met) < 16:
-      bm = bit_mask(x.mask)
+      bm = anhost.bit_mask(x.mask)
       network = netaddr.IPNetwork("%s/%s" % (x.dst,bm))
       there = False
       
@@ -210,7 +203,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
       for neigh in neighbors:
         y = anhost.Route()
         y.set_route(neigh)
-        bm = bit_mask(y.mask)
+        bm = anhost.bit_mask(y.mask)
         have_net = netaddr.IPNetwork("%s/%s" % (y.dst,bm))
 
         ## test if route (x) and neigh (y) are the same network route advertisement

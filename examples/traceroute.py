@@ -2,6 +2,7 @@ import socket # for creating a socket
 import re # for pattern matching ip address
 import logging
 import logging.handlers
+import os
 
 import sys
 sys.path.append("..")
@@ -12,9 +13,6 @@ FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger("%s | %s | " % (os.getpid(), __file__) )
 logger.setLevel(logging.DEBUG)
-socketHandler = logging.handlers.SocketHandler('localhost',
-                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
-logger.addHandler(socketHandler)
 
 def help_traceroute():
   print("\ttraceroute -- print the route packets take to active network hosts")
@@ -47,6 +45,8 @@ def traceroute(args):
 import socket as sk
 import datetime as dt
 import threading
+import logging
+import os
 
 import sys
 sys.path.append("..")
@@ -68,8 +68,11 @@ tmr = 0
 fi = __file__
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
 ch = anhost.get_ip_address("eth1")
+logger.debug("fin flag set: %s" % fin)
 if not fin:
+  logger.debug("current host: %s" % ch)
   if ch == src:
+    logger.debug("on sender, setting timer: %s" % dn)
     anhost.chg_val(fi,0.0,"tmr",dn,'w')
   else:
     anhost.chg_val(fi,[],"hop",ch,'a')
@@ -82,7 +85,12 @@ if not fin:
       tmp = dst
       anhost.chg_val(fi,"","dst",src,'w')
       anhost.chg_val(fi,"","src",tmp,'w')
-  sock.sendto(open(fi).read(), (dst,50000))
+  logger.debug("sending to: %s" % dst)
+  logger.debug("checking route table for interface/ip")
+  new_dst = anhost.get_forward_ip(dst)
+  logger.debug("selected forward interface: %s" % new_dst)
+  sock.sendto(open(fi).read(), (new_dst,50000))
+  #sock.sendto(open(fi).read(), ("10.0.0.2",50000))
 else:
   if ch == dst:
     iter = 0
@@ -91,12 +99,13 @@ else:
       print "%4s\t%20s\t%4s" % ("hop","host","delay")
       print "%4d\t%20s\t%4s" % (iter,h,tr)
   else:
+    logger.debug("sending to: %s" % dst)
     sock.sendto(open(fi).read(), (dst,50000))
 
 
-trace = threading.Thread(target=function,args=(,))
-trace.start()
-trace.join()
+#trace = threading.Thread(target=function,args=(,))
+#trace.start()
+#trace.join()
 """
   # we should run it locally first to populate, send to self first, then forward.
   local_code = anhost.set_src_dst(AN_code, src,dst)

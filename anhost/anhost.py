@@ -9,6 +9,7 @@ import time
 import os
 import pprint as pp
 import subprocess
+import netaddr
 
 default_gw = "0.0.0.0"
 
@@ -465,16 +466,27 @@ def get_time():
   now -= epoch
   return float("%s.%s" % (now.seconds%60,now.microseconds/1000))
 
-##FIXME
-def use_default_route():
-  rtable = get_route_table()
-  for eth in rtable:
-    for eth_d in eth:
-      for val in eth[eth_d]:
-        if val == "Destination" and eth[eth_d][val] == "0.0.0.0":
-          return eth[eth_d]["Gateway"]
-  return -1
+def bit_mask(mask):
+  x = mask.split(".")
+  bc = 0
+  for k in x:
+    bc += bin(int(k)).count("1")
+  return str(bc)
 
+##give destination, get next hop ip
+def get_forward_ip(dest):
+  rtable = non_default_routes()
+  for route in rtable:
+    bm = bit_mask(route["Genmask"])
+    net = route["Destination"]
+    net_as_str = net+"/"+str(bm)
+    if netaddr.IPAddress(dest) in netaddr.IPNetwork(net_as_str):
+      ## if we have an interface on that net, return the dest, just send it
+      if route["Gateway"] == default_gw:
+        return dest
+      else:
+        return route["Gateway"]
+  return -1
 
 def send_to_local_interfaces(msg,dev_iface,mgmt,port):
   logger.debug("\t\tSEND_TO_ALL_INTERFACES")
