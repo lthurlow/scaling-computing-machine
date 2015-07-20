@@ -60,6 +60,8 @@ logger.setLevel(logging.DEBUG)
 hop = []
 trace = []
 
+mgmt = "eth0"
+lh = ""
 dn = anhost.get_time()
 dst = ""
 src = ""
@@ -67,10 +69,21 @@ fin = 0
 tmr = 0
 fi = __file__
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
-ch = anhost.get_ip_address("eth1")
+ch = ""
+## get the last hop, see which interface its asciated with, then get ip
+if lh:
+  ch = anhost.get_ip_address(anhost.get_interface(lh,mgmt))
+else:
+  ## we assume this is the source host then
+  ch = anhost.get_ip_address(anhost.get_interface(dst,mgmt))
+  
 logger.debug("fin flag set: %s" % fin)
+logger.debug("last host: %s" % lh)
+logger.debug("current host: %s" % ch)
+anhost.chg_val(fi,"","lh",ch,'w')
+logger.debug("updated last host: %s" % ch)
+
 if not fin:
-  logger.debug("current host: %s" % ch)
   if ch == src:
     logger.debug("on sender, setting timer: %s" % dn)
     anhost.chg_val(fi,0.0,"tmr",dn,'w')

@@ -66,22 +66,6 @@ def read_n_fi(n_fi):
   mutex.release()
   return neighbor
 
-## get the interface name associated with an IP
-## should add more error code...
-def get_interface(ip,mgmt):
-  #logger.debug("GET_INTERFACE")
-  routes = anhost.sim_routes(mgmt)
-  for route in routes:
-    bm = anhost.bit_mask(route["Genmask"])
-    net = route["Destination"]
-    net_as_str = net+"/"+str(bm)
-    #logger.debug("\tnetwork: %s" % net_as_str)
-    #logger.debug("\t"+ip)
-    if netaddr.IPAddress(ip) in netaddr.IPNetwork(net_as_str):
-      #logger.debug("\tTrue")
-      return route["Iface"]
-  logger.error("interface not found!")
-
 ## check timeout makes sure to timeout stale routes
 ## gets called by both recieve and send in a timely fashion
 def check_timeout(fi,neighbors,mgmt,dev):
@@ -340,7 +324,7 @@ def rip_server(code, serv_port, rip_port, mgmt):
       logger.debug("input que: %s" % inputready)
       ## FIXME problem may be here
       for sock in inputready: 
-        dev = get_interface(sock.getsockname()[0],mgmt)
+        dev = anhost.get_interface(sock.getsockname()[0],mgmt)
         logger.debug("\t\taceepting messages...")
         msg, addr = sock.recvfrom(4096)
         logger.debug("\t\tmessage: %s" % msg)

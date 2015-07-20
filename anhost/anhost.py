@@ -488,6 +488,32 @@ def get_forward_ip(dest):
         return route["Gateway"]
   return -1
 
+## get the interface name associated with an IP
+## should add more error code...
+def get_interface(ip,mgmt):
+  #logger.debug("GET_INTERFACE")
+  routes = sim_routes(mgmt)
+  for route in routes:
+    bm = bit_mask(route["Genmask"])
+    net = route["Destination"]
+    net_as_str = net+"/"+str(bm)
+    #logger.debug("\tnetwork: %s" % net_as_str)
+    #logger.debug("\t"+ip)
+    if netaddr.IPAddress(ip) in netaddr.IPNetwork(net_as_str):
+      #logger.debug("\tTrue")
+      return route["Iface"]
+  logger.error("interface not found!")
+
+##give destination, get next hop ip
+def get_default_intefaces():
+  routes = []
+  stable = sim_routes()
+  for route in stable:
+    if route["Genmask"] == default_gw:
+      routes.append(route)
+  return routes
+
+
 def send_to_local_interfaces(msg,dev_iface,mgmt,port):
   logger.debug("\t\tSEND_TO_ALL_INTERFACES")
   iface_list = non_default_routes()
