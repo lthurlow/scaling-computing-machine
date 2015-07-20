@@ -488,6 +488,7 @@ def get_forward_ip(dest):
         return route["Gateway"]
   return -1
 
+
 ## get the interface name associated with an IP
 ## should add more error code...
 def get_interface(ip,mgmt):
@@ -512,6 +513,26 @@ def get_default_intefaces():
     if route["Genmask"] == default_gw:
       routes.append(route)
   return routes
+
+def check_same_host(src,dst):
+  routes = get_default_intefaces()
+  srcThere = False
+  dstThere = False
+  for route in routes:
+    bm = bit_mask(route["Genmask"])
+    net = route["Destination"]
+    net_as_str = net+"/"+str(bm)
+    if netaddr.IPAddress(src) in netaddr.IPNetwork(net_as_str):
+      srcThere = True
+    elif netaddr.IPAddress(dst) in netaddr.IPNetwork(net_as_str):
+      dstThere = True
+  if srcThere and dstThere:
+    return True
+  else:
+    return False
+  
+
+
 
 
 def send_to_local_interfaces(msg,dev_iface,mgmt,port):

@@ -83,6 +83,8 @@ logger.debug("current host: %s" % ch)
 anhost.chg_val(fi,"","lh",ch,'w')
 logger.debug("updated last host: %s" % ch)
 
+new_dst = anhost.get_forward_ip(dst)
+
 if not fin:
   if ch == src:
     logger.debug("on sender, setting timer: %s" % dn)
@@ -93,14 +95,14 @@ if not fin:
       print type(dn),type(tmr)
       anhost.chg_val(fi,[],"trace",dn-tmr,'a')
       anhost.chg_val(fi,0.0,"tmr",dn,'w')
-    if ch == dst:
+    if ch == dst or anhost.check_same_host(ch,dst):
       anhost.chg_val(fi,0,"fin",1,'w')
       tmp = dst
       anhost.chg_val(fi,"","dst",src,'w')
       anhost.chg_val(fi,"","src",tmp,'w')
+      new_dst = anhost.get_forward_ip(src)
   logger.debug("sending to: %s" % dst)
   logger.debug("checking route table for interface/ip")
-  new_dst = anhost.get_forward_ip(dst)
   logger.debug("selected forward interface: %s" % new_dst)
   sock.sendto(open(fi).read(), (new_dst,50000))
   #sock.sendto(open(fi).read(), ("10.0.0.2",50000))
@@ -113,7 +115,7 @@ else:
       print "%4d\t%20s\t%4s" % (iter,h,tr)
   else:
     logger.debug("sending to: %s" % dst)
-    sock.sendto(open(fi).read(), (dst,50000))
+    sock.sendto(open(fi).read(), (new_dst,50000))
 
 
 #trace = threading.Thread(target=function,args=(,))
