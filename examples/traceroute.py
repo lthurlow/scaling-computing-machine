@@ -95,7 +95,7 @@ if not fin:
       print type(dn),type(tmr)
       anhost.chg_val(fi,[],"trace",dn-tmr,'a')
       anhost.chg_val(fi,0.0,"tmr",dn,'w')
-    if ch == dst or anhost.check_same_host(ch,dst):
+    if ch == dst or anhost.check_same_host(ch,dst,mgmt):
       anhost.chg_val(fi,0,"fin",1,'w')
       tmp = dst
       anhost.chg_val(fi,"","dst",src,'w')

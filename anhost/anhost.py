@@ -506,16 +506,16 @@ def get_interface(ip,mgmt):
   logger.error("interface not found!")
 
 ##give destination, get next hop ip
-def get_default_intefaces():
+def get_default_intefaces(mgmt):
   routes = []
-  stable = sim_routes()
+  stable = sim_routes(mgmt)
   for route in stable:
     if route["Genmask"] == default_gw:
       routes.append(route)
   return routes
 
-def check_same_host(src,dst):
-  routes = get_default_intefaces()
+def check_same_host(src,dst,mgmt):
+  routes = get_default_intefaces(mgmt)
   srcThere = False
   dstThere = False
   for route in routes:
