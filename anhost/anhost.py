@@ -577,3 +577,35 @@ def thread_recv(ip,port,timeout=30):
   trace.start()
   trace.join()
 
+def service_running(fi):
+  if os.path.exists(fi):
+    return True
+  else:
+    return False
+
+"""
+     tx_ok: 1418
+     rx_ok: 2095
+     tx_err: 0
+     rx_err: 1777
+     rx_fifo: 0
+     frame_align: 0
+     tx_ok_1col: 0
+     tx_ok_mcol: 0
+     rx_ok_phys: 2095
+     rx_ok_bcast: 0
+     rx_ok_mcast: 0
+     tx_abort: 0
+     tx_underrun: 0
+     rx_frags: 0
+"""
+
+## just going to use ethtool here instead of /proc
+def interface_stats(dev):
+  output = subprocess.check_output(['ethtool', '-S','%s' % dev])
+  stats = {}
+  for line in output.split('\n')[1:-1]:
+    stats[line.split()[0][:-1]] = line.split()[1]
+  return stats
+
+#def current_rate_drop(interface):
