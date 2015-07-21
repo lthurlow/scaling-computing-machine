@@ -112,15 +112,20 @@ if not fin:
 else:
   if ch == dst:
     iter = 0
+    print "traceroute to %s" % src
     for h,tr in zip(hop,trace):
       iter +=1
-      print "%4s\t%20s\t%4s" % ("hop","host","delay")
-      print "%4d\t%20s\t%4s" % (iter,h,tr)
+      #print "%s\t%s\t%s" % ("hop","host","delay")
+      print "%d\t%s\t%s" % (iter,h,tr)
   else:
     logger.debug("sending to: %s" % dst)
     sock.sendto(open(fi).read(), (new_dst,50000))
 
+#traceroute to 10.0.2.3 (10.0.2.3), 30 hops max, 60 byte packets
+# 1  10.0.0.2 (10.0.0.2)  1.400 ms  1.208 ms  0.608 ms
+# 2  10.0.2.3 (10.0.2.3)  4.430 ms  3.871 ms  2.299 ms
 
+## start on 60000 port, and join thread until response
 #trace = threading.Thread(target=function,args=(,))
 #trace.start()
 #trace.join()

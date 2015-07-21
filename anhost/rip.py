@@ -68,7 +68,7 @@ def read_n_fi(n_fi):
 
 ## check timeout makes sure to timeout stale routes
 ## gets called by both recieve and send in a timely fashion
-def check_timeout(fi,neighbors,mgmt,dev):
+def check_timeout(fi,neighbors,dev):
   logger.debug("CHECK_TIMEOUT (%s) " % dev)
   current_time = datetime.datetime.now()
   new_neigh = []
@@ -102,12 +102,12 @@ def check_timeout(fi,neighbors,mgmt,dev):
 
   logger.debug("\tRoute table after Check: %s" % new_neigh)
   write_n_fi(fi,new_neigh)
-  anhost.modify_linux_tables(new_neigh,mgmt)
+  anhost.modify_linux_tables(new_neigh)
   return new_neigh
 
 ## send updates from current device to all link local devices
 ## see FIX comment below
-def send_update(sock,n_fi,rip_port,dev,mgmt):
+def send_update(sock,n_fi,rip_port,dev):
   logger.debug("SEND_UPDATE (%s)" % dev)
   ## get our current routes from file
   n_dict = read_n_fi(n_fi)
@@ -120,7 +120,7 @@ def send_update(sock,n_fi,rip_port,dev,mgmt):
     rip_update.append(x.transmit_route())
 
   ## check to see if in the absence of recieve_update, a route has timed-out
-  rip_update = check_timeout(n_fi,rip_update,mgmt,dev)
+  rip_update = check_timeout(n_fi,rip_update,dev)
 
   rip_checked = []
   for k in rip_update:
@@ -139,16 +139,16 @@ def send_update(sock,n_fi,rip_port,dev,mgmt):
   anhost.send_broadcast(anhost.get_ip_address(dev),data_str,rip_port)
 
 ## keep-alive sending interface
-def send_handler(sock,n_fi,port,dev,mgmt):
+def send_handler(sock,n_fi,port,dev):
   ## once every time interval schedule a send to neighbors
   while True:
     logger.debug("SEND_HANDLER")
-    send_update(sock, n_fi,port,dev,mgmt)
+    send_update(sock, n_fi,port,dev)
     time.sleep(30)
 
 ## handle the updates recieved by neighbors
 ## XXX here
-def recv_update(neigh_fi,addr, dev,mgmt, update):
+def recv_update(neigh_fi,addr, dev, update):
   ## only allow one update to happen at a time to maintain
   ## consistancy when reading and writing to the route table file
   recv_mutex.acquire()
@@ -164,7 +164,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   ## if anything does timeout, but is in this message, it will be
   ## added back, and because timeout will only remove if it is from the
   ## current interface, this interface will have the first chance to update
-  neighbors = check_timeout(neigh_fi,neighbors,mgmt,dev)
+  neighbors = check_timeout(neigh_fi,neighbors,dev)
   current_time = datetime.datetime.now()
 
   ## route (x) = updates from the neighbor
@@ -253,7 +253,7 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   ##write out the updated routes to the route file
   write_n_fi(neigh_fi,update_neighbors)
   ##FIXME: add to linux route table
-  anhost.modify_linux_tables(update_neighbors,mgmt)
+  anhost.modify_linux_tables(update_neighbors)
 
   logger.info("\tAfter Update route table: %s" % update_neighbors)
 
@@ -261,13 +261,13 @@ def recv_update(neigh_fi,addr, dev,mgmt, update):
   recv_mutex.release()
 
 #FIXME when I get there, impletement poison-reverse for Counting problem
-def rip_server(code, serv_port, rip_port, mgmt):
+def rip_server(code, serv_port, rip_port):
   neigh = "%s.rip" % rip_port
   logger.debug("RIP SERVER:")
   logger.debug("PID: %s" % os.getpid())
 
   l_route = []
-  routes = anhost.sim_routes(mgmt)
+  routes = anhost.sim_routes()
   rip_interfaces = []
 
   ##this write needs to have guards to make sure it doesnt wipe out another
@@ -279,7 +279,7 @@ def rip_server(code, serv_port, rip_port, mgmt):
     x.close()
     for route in routes:
       iface_ip = anhost.get_ip_address(route["Iface"])
-      if iface_ip != mgmt:
+      if iface_ip != anhost.mgmt:
         ## default routes gets linux, but now we need to add arbitrary ttl for rip
         ##FIXME change get_routes to use Routes()
         x = anhost.Route()
@@ -309,7 +309,7 @@ def rip_server(code, serv_port, rip_port, mgmt):
       ## to eachother compared to synchronous recieves
       logger.debug("starting RIP update thread for %s" % route["Iface"])
       send_thread = threading.Thread(target=send_handler,\
-                     args=(rip_serv,neigh,rip_port,route["Iface"],mgmt,))
+                     args=(rip_serv,neigh,rip_port,route["Iface"],))
       send_thread.start()
       #send_thread.join() #cant use join(), blocking calls
 
@@ -322,13 +322,12 @@ def rip_server(code, serv_port, rip_port, mgmt):
       #select is a blocking instruction.
       inputready,outputready,exceptready = select.select(rip_interfaces,[],[]) 
       logger.debug("input que: %s" % inputready)
-      ## FIXME problem may be here
       for sock in inputready: 
-        dev = anhost.get_interface(sock.getsockname()[0],mgmt)
+        dev = anhost.get_interface(sock.getsockname()[0])
         logger.debug("\t\taceepting messages...")
         msg, addr = sock.recvfrom(4096)
         logger.debug("\t\tmessage: %s" % msg)
         logger.debug("\t\tsender's addr: (%s,%s)" % (addr[0],addr[1]))
-        recv_update(neigh,addr[0],dev,mgmt,json.loads(msg))
+        recv_update(neigh,addr[0],dev,json.loads(msg))
         logger.debug("\t\tupdate written out to file.")
         logger.info("UPDATED NEIGHBORS: %s" % read_n_fi(neigh))

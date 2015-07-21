@@ -45,14 +45,12 @@ net_port = 50001 # rip port to use
 fi = __file__ # file name
 route_fi = ".route_rip" #server file flag
 
-mgmt_dev = "eth0"
-
 logger.debug("Checking for RIP file: %s" % route_fi)
 ## start service on this host
 if not os.path.exists(route_fi):
   logger.info("Starting RIP server" )
   rip_thread = threading.Thread(target=rip.rip_server, args=(open(fi).read(),\
-                                serv_port,net_port,mgmt_dev,))
+                                serv_port,net_port,))
   logger.debug("%s Thread: RIP Server" % fi)
   logger.debug("PID: %s" % os.getpid())
   rip_thread.start()

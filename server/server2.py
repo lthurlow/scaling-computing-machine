@@ -11,6 +11,7 @@ import time               # for sleeping
 import SocketServer       # for test server
 import threading          # for test thread server
 import re                 # for purging server files
+import select             # for queing packsets on all interfaces
 import sys
 sys.path.append("..")
 from anhost import anhost             # for all my active networks stuff
@@ -25,8 +26,8 @@ socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 logger.addHandler(socketHandler)
 
-
-
+## less typing for now.
+"""
 INTERFACE = 'eth0'
 PORT = 50000
 inf, po = inputs.user()
@@ -35,6 +36,7 @@ if inf:
 if po:
   PORT = po
 HOST = str(anhost.get_ip_address(INTERFACE))
+"""
 PROCESS_TRACKER = []
 
 ## For AWS, when code is invalid, return notification to sending
@@ -147,26 +149,30 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
 class ThreadedUDPServer(SocketServer.ThreadingMixIn,SocketServer.UDPServer):
   pass
 
-
-server = ThreadedUDPServer((HOST, PORT), ThreadedUDPRequestHandler)
-ip, port = server.server_address
-logger.debug("server started on: (%s,%s)" % (ip,port))
-try:
-  server.serve_forever()
-  server_thread = threading.Thread(target=server.serve_forever)
-  # When this process dies, all threads die as well
-  server_thread.daemon = True
-  server_thread.start()
-  server.shutdown()
-except KeyboardInterrupt:
-  #graceful death
-  logger.error("Recieved Keyboard Interrupt")
-  kill_processes()
-  server.shutdown()
-  ## not so graceful
-  #os._exit(1)
-except Exception,e:
-  logger.error("Unknown Server Error thrown: %s" % str(e))
-  kill_processes()
-  server.shutdown()
-  #os._exit(2)
+#FIXME: all of it
+routes = anhost.sim_routes()
+for route in routes:
+  iface_ip = anhost.get_ip_address(route["Iface"])
+  if iface_ip != anhost.mgmt:
+    server = ThreadedUDPServer((iface_ip, 50000), ThreadedUDPRequestHandler)
+    ip, port = server.server_address
+    logger.debug("server started on: (%s,%s)" % (ip,port))
+    try:
+      server.serve_forever()
+      server_thread = threading.Thread(target=server.serve_forever)
+      # When this process dies, all threads die as well
+      server_thread.daemon = True
+      server_thread.start()
+      server.shutdown()
+    except KeyboardInterrupt:
+      #graceful death
+      logger.error("Recieved Keyboard Interrupt")
+      kill_processes()
+      server.shutdown()
+      ## not so graceful
+      #os._exit(1)
+    except Exception,e:
+      logger.error("Unknown Server Error thrown: %s" % str(e))
+      kill_processes()
+      server.shutdown()
+      #os._exit(2)

@@ -12,6 +12,7 @@ import subprocess
 import netaddr
 
 default_gw = "0.0.0.0"
+mgmt = "eth0"
 
 class Route:
   dst = ""
@@ -232,7 +233,7 @@ def non_default_routes():
     count += 1
   return routes
 
-def sim_routes(mgmt):
+def sim_routes():
   output = subprocess.check_output(['route', '-nv'])
   count = 0
   keys = []
@@ -285,9 +286,9 @@ def set_route_table(rdict,flag="add"):
     logger.error(str(e))
     return -1
 
-def modify_linux_tables(mem_t,mgmt):
+def modify_linux_tables(mem_t):
   logger.debug("MODIFY_LINUX_TABLES")
-  linux = sim_routes(mgmt)
+  linux = sim_routes()
   for r1 in linux:
     same = False
     for r2 in mem_t:
@@ -491,9 +492,9 @@ def get_forward_ip(dest):
 
 ## get the interface name associated with an IP
 ## should add more error code...
-def get_interface(ip,mgmt):
+def get_interface(ip):
   #logger.debug("GET_INTERFACE")
-  routes = sim_routes(mgmt)
+  routes = sim_routes()
   for route in routes:
     bm = bit_mask(route["Genmask"])
     net = route["Destination"]
@@ -506,16 +507,16 @@ def get_interface(ip,mgmt):
   logger.error("interface not found!")
 
 ##give destination, get next hop ip
-def get_default_intefaces(mgmt):
+def get_default_intefaces():
   routes = []
-  stable = sim_routes(mgmt)
+  stable = sim_routes()
   for route in stable:
     if route["Gateway"] == default_gw:
       routes.append(route)
   return routes
 
-def check_same_host(src,dst,mgmt):
-  routes = get_default_intefaces(mgmt)
+def check_same_host(src,dst):
+  routes = get_default_intefaces()
   logger.debug("defaults: %s" % routes)
   srcThere = False
   dstThere = False
@@ -538,7 +539,7 @@ def check_same_host(src,dst,mgmt):
 
 
 
-def send_to_local_interfaces(msg,dev_iface,mgmt,port):
+def send_to_local_interfaces(msg,dev_iface,port):
   logger.debug("\t\tSEND_TO_ALL_INTERFACES")
   iface_list = non_default_routes()
   #logger.debug("Non-default Routes: %s" % iface_list)
