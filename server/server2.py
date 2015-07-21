@@ -27,9 +27,8 @@ socketHandler = logging.handlers.SocketHandler('localhost',
 logger.addHandler(socketHandler)
 
 ## less typing for now.
-"""
-INTERFACE = 'eth0'
 PORT = 50000
+""""
 inf, po = inputs.user()
 if inf:
   INTERFACE = inf
@@ -149,30 +148,36 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
 class ThreadedUDPServer(SocketServer.ThreadingMixIn,SocketServer.UDPServer):
   pass
 
-#FIXME: all of it
+## get all of the routes in our sim environment
 routes = anhost.sim_routes()
+p_open = []
+server_list = []
 for route in routes:
   iface_ip = anhost.get_ip_address(route["Iface"])
-  if iface_ip != anhost.mgmt:
-    server = ThreadedUDPServer((iface_ip, 50000), ThreadedUDPRequestHandler)
+  ## check that the interface attached is not mgmt and not already opened
+  if iface_ip != anhost.mgmt and iface_ip not in p_open:
+    ## add to list, and create server to attach to the device ip and an_port
+    p_open.append(iface_ip)
+    server = ThreadedUDPServer((iface_ip, PORT), ThreadedUDPRequestHandler)
+    server_list.append(server)
     ip, port = server.server_address
     logger.debug("server started on: (%s,%s)" % (ip,port))
     try:
-      server.serve_forever()
+      ## start a thread to handle connections
       server_thread = threading.Thread(target=server.serve_forever)
-      # When this process dies, all threads die as well
       server_thread.daemon = True
       server_thread.start()
-      server.shutdown()
-    except KeyboardInterrupt:
-      #graceful death
-      logger.error("Recieved Keyboard Interrupt")
-      kill_processes()
-      server.shutdown()
-      ## not so graceful
-      #os._exit(1)
     except Exception,e:
       logger.error("Unknown Server Error thrown: %s" % str(e))
       kill_processes()
       server.shutdown()
-      #os._exit(2)
+try:
+  ## dont let the threads end, but dont join, just run until keyboard inputs
+  for server in server_list:
+    server.serve_forever()
+    #server.shutdown()
+except KeyboardInterrupt:
+  #graceful death
+  logger.error("Recieved Keyboard Interrupt")
+  kill_processes()
+  server.shutdown()

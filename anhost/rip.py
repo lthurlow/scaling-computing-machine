@@ -269,6 +269,7 @@ def rip_server(code, serv_port, rip_port):
   l_route = []
   routes = anhost.sim_routes()
   rip_interfaces = []
+  p_open = []
 
   ##this write needs to have guards to make sure it doesnt wipe out another
   ##interfaces update
@@ -279,7 +280,8 @@ def rip_server(code, serv_port, rip_port):
     x.close()
     for route in routes:
       iface_ip = anhost.get_ip_address(route["Iface"])
-      if iface_ip != anhost.mgmt:
+      if iface_ip != anhost.mgmt and iface_ip not in p_open:
+        p_open.append(iface_ip)
         ## default routes gets linux, but now we need to add arbitrary ttl for rip
         ##FIXME change get_routes to use Routes()
         x = anhost.Route()
