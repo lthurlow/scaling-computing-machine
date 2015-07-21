@@ -10,6 +10,7 @@ import os
 import pprint as pp
 import subprocess
 import netaddr
+import threading
 
 default_gw = "0.0.0.0"
 mgmt = "eth0"
@@ -535,10 +536,6 @@ def check_same_host(src,dst):
   else:
     return False
   
-
-
-
-
 def send_to_local_interfaces(msg,dev_iface,port):
   logger.debug("\t\tSEND_TO_ALL_INTERFACES")
   iface_list = non_default_routes()
@@ -564,4 +561,19 @@ def send_broadcast(local_ip,msg,port):
       sock.sendto(msg, (prefix+str(i),port))
   ##FIXME: why is this not being printed?
   logger.debug("\t\tbroadcast done.")
+
+## only waits for single message
+def recver(ip,port,timeout):
+  logger.debug("starting server (%s,%s)" %(ip,port))
+  trace_serv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  trace_serv.bind((ip,port))
+  trace_serv.settimeout(timeout)
+  msg, addr = trace_serv.recvfrom(4096)
+  logger.debug("\t\tsender: (%s,%s)" % (addr[0],addr[1]))
+  print msg
+
+def thread_recv(ip,port,timeout=30):
+  trace = threading.Thread(target=recver,args=(ip,port,timeout,))
+  trace.start()
+  trace.join()
 
