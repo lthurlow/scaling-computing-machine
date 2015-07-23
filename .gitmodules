@@ -1,0 +1,3 @@
+[submodule "anhost/python-netfilterqueue"]
+	path = anhost/python-netfilterqueue
+	url = https://github.com/fqrouter/python-netfilterqueue.git
