@@ -9,7 +9,8 @@ import pprint
 import threading
 import anhost
 import sys
-sys.path.append("../netfilterqueue")
+## because it is a shared lib
+sys.path.insert(0, "./netfilterlib/")
 from netfilterqueue import NetfilterQueue
 
 FORMAT = "[%(filename)s:%(lineno)s - %(threadName)s %(funcName)20s] %(levelname)10s %(message)s"

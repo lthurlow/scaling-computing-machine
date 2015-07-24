@@ -9,8 +9,10 @@ import time
 import os
 import pprint as pp
 import subprocess
-import netaddr
 import threading
+import sys
+sys.path.append("..")
+import netaddr
 
 default_gw = "0.0.0.0"
 mgmt = "eth0"
