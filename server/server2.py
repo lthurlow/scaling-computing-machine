@@ -98,6 +98,7 @@ def kill_processes():
   logger.debug("KILL_PROCESSES")
   ##FIXME
   purge("rip")
+  purge("snoop")
   for proc in PROCESS_TRACKER:
     try:
       #logger.info("Sending Hangup to %s" % proc)
@@ -108,6 +109,7 @@ def kill_processes():
       logger.info("Process %s killed" % proc)
     except Exception,e:
       logger.info("\tPrcoess %s unable to kill: %s" % (proc,str(e)))
+  subprocess.call(["sudo","iptables","-F"])
 
 class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
   ##FIXME needs a way to differentiate active code from other

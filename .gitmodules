@@ -1,3 +1,6 @@
 [submodule "anhost/python-netfilterqueue"]
 	path = anhost/python-netfilterqueue
 	url = https://github.com/fqrouter/python-netfilterqueue.git
+[submodule "python-tcpsnoop"]
+	path = python-tcpsnoop
+	url = https://github.com/lthurlow/python-tcpsnoop.git

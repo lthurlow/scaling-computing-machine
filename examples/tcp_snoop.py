@@ -27,7 +27,8 @@ import datetime
 import sys
 sys.path.append("..")
 from anhost import anhost
-from anhost import snoop
+sys.path.append("../python-tcpsnoop")
+import snoop
 
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(levelname)s %(message)s"
 logging.basicConfig(format=FORMAT)
@@ -35,28 +36,31 @@ logger = logging.getLogger("%s | %s |" % (os.getpid(), __file__) )
 logger.setLevel(logging.DEBUG)
 
 serv_port = 50000 #active node server
-net_port = 80001
+net_port = 80005
 fi = __file__ # file name
-snoop = ".snoop"
-## we are only going to snoop up to 3 hops away for statistics
-net_thresh = 3
+tcp_fi = ".snoop_fi".strip()
 
-logger.debug("Checking for RIP file: %s" % route_fi)
 ## start service on this host
-if anhost.service_running(snoop):
+if not anhost.service_running(tcp_fi):
+
   logger.info("Starting SNOOP" )
-  snoop_thread = threading.Thread(target=snoop.snoop_server, args=(open(fi).read(),\
-                                serv_port,net_port,))
+  t2 = open(tcp_fi,'w')
+  t2.close()
+
+  snoop_thread = threading.Thread(target=snoop.start_snoop, args=(["eth1","eth2"],"NFQUEUE",1,))
   logger.debug("%s Thread: SNOOP Server" % fi)
   logger.debug("PID: %s" % os.getpid())
   snoop_thread.start()
   snoop_thread.join()
-  logger.debug("RIP Server started")
+  logger.debug("SNOOP Server started")
 
-  t2 = open(route_fi,'w')
-  t2.close()
 else:
+  logger.debug(os.getcwd())
+  logger.debug(os.listdir("."))
   logger.debug("Snoop already running")
+
+
+
 
 exit(0)
 """
